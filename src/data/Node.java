@@ -15,12 +15,22 @@ public class Node {
     private  Boolean ghostNode;
     private Boolean depot;
     private Boolean dumpingSite;
+    private Boolean nullNode;
 
     public Node() {
         this.visited = false;
         this.ghostNode = false;
         this.depot = false;
         this.dumpingSite = false;
+        this.nullNode = false;
+    }
+
+    public Boolean getNullNode() {
+        return nullNode;
+    }
+
+    public void setNullNode(Boolean nullNode) {
+        this.nullNode = nullNode;
     }
 
     public Boolean getDumpingSite() {

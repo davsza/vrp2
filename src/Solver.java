@@ -20,11 +20,18 @@ public class Solver {
         for(Vehicle vehicle : data.getFleet()) vehicle.initVehicle(data.getNodeListSize());
 
         Node currentNode = data.getDepotNode();
-        Node nextNode = null;
+        Node nextNode;
         Vehicle currentVehicle = data.getFleet().get(0);
+        currentVehicle.switchNode(currentVehicle.getRoute().get(0), currentNode);
 
         while(data.unvisitedNode()){
             nextNode = data.findNextNode(currentVehicle, currentNode);
+            if (!nextNode.getNullNode()) {
+                float distance = data.getDistanceBetweenNode(currentNode, nextNode);
+                currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + distance);
+            }
+
+
         }
 
     }

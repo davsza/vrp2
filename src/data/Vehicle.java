@@ -12,7 +12,7 @@ public class Vehicle {
     private Float maximumTravelTime;
     private List<Node> route;
     private Integer currentNodeId;
-    private Integer currentTime;
+    private Float currentTime;
 
     private Integer maximumCapacity;
 
@@ -84,22 +84,27 @@ public class Vehicle {
         this.currentNodeId = currentNodeId;
     }
 
-    public Integer getCurrentTime() {
+    public Float getCurrentTime() {
         return currentTime;
     }
 
-    public void setCurrentTime(Integer currentTime) {
+    public void setCurrentTime(Float currentTime) {
         this.currentTime = currentTime;
     }
 
     public void initVehicle(int size) {
         setCurrentNodeId(0);
-        setCurrentTime(0);
+        setCurrentTime((float) 0);
         setCapacity(0);
         for(int i = 0; i < size; i++) {
             Node node = new Node();
             node.setGhostNode(true);
             route.add(node);
         }
+    }
+
+    public void switchNode(Node fromNode, Node toNode) {
+        int index = fromNode.getId();
+        this.route.set(index, toNode);
     }
 }

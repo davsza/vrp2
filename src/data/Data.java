@@ -75,9 +75,10 @@ public class Data {
     }
 
     public Node findNextNode(Vehicle vehicle, Node currentNode) {
-        int currentTime = vehicle.getCurrentTime();
+        float currentTime = vehicle.getCurrentTime();
         float bestDistance = Float.MAX_VALUE;
-        Node bestNode = null;
+        Node bestNode = new Node();
+        bestNode.setNullNode(true);
         for(Node node : nodeList) {
             float distance = getDistanceBetweenNode(currentNode, node); //
             float arrivalTime = currentTime + distance;
@@ -133,7 +134,7 @@ public class Data {
         return customerNode(node) && !node.getVisited();
     }
 
-    private float getDistanceBetweenNode(Node nodeFrom, Node nodeTo) {
+    public float getDistanceBetweenNode(Node nodeFrom, Node nodeTo) {
         return matrix[nodeFrom.getId()][nodeTo.getId()];
     }
 }
