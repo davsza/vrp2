@@ -16,6 +16,52 @@ public class Data {
         this.fleet = new ArrayList<>();
     }
 
+    public Data(Data data) {
+        this.dataset = data.getDataset();
+        this.info = data.getInfo();
+        this.matrix = data.getMatrix();
+        this.nodeList = copyNodeList(data.getNodeList());
+        this.fleet = copyFleet(data.getFleet());
+    }
+
+    private List<Vehicle> copyFleet(List<Vehicle> fleet) {
+        List<Vehicle> vehicles = new ArrayList<>();
+        for(Vehicle vehicle : fleet) {
+            Vehicle copiedVehicle = new Vehicle(vehicle);
+            vehicles.add(copiedVehicle);
+        }
+        return vehicles;
+    }
+
+    private List<Node> copyNodeList(List<Node> nodeList) {
+        List<Node> nodes = new ArrayList<>();
+        for(Node node : nodeList) {
+            Node copiedNode = new Node(node);
+            nodes.add(copiedNode);
+        }
+        return nodes;
+    }
+
+    public String getDataset() {
+        return dataset;
+    }
+
+    public Float[][] getMatrix() {
+        return matrix;
+    }
+
+    public void setNodeList(List<Node> nodeList) {
+        this.nodeList = nodeList;
+    }
+
+    public void setFleet(List<Vehicle> fleet) {
+        this.fleet = fleet;
+    }
+
+    public String getInfo() {
+        return info;
+    }
+
     public void setDataset(String dataset) {
         this.dataset = dataset;
     }
@@ -59,12 +105,10 @@ public class Data {
         return fleet;
     }
 
-    public boolean unvisitedNode() {
+    public boolean hasMoreUnvisitedNodes() {
         for(Node node : nodeList) {
-            if(!node.getGhostNode() && !node.getDumpingSite() && !node.getDepot()) {
-                if(!node.getVisited()) {
-                    return true;
-                }
+            if(customerNodeAndNotVisitedYet(node)) {
+                return true;
             }
         }
         return false;
@@ -75,44 +119,73 @@ public class Data {
     }
 
     public Node findNextNode(Vehicle vehicle, Node currentNode) {
-        float currentTime = vehicle.getCurrentTime();
-        float bestDistance = Float.MAX_VALUE;
-        Node bestNode = new Node();
-        bestNode.setNullNode(true);
-        for(Node node : nodeList) {
-            float distance = getDistanceBetweenNode(currentNode, node); //
-            float arrivalTime = currentTime + distance;
-            if(customerNodeAndNotVisitedYet(node)
-                    && travelCheck(arrivalTime, node)
-                    && maxTravelTimeCheck(vehicle, currentNode, node) && capacityCheck(vehicle, node)
-                    && distance < bestDistance)
-            {
-                bestDistance = matrix[currentNode.getId()][node.getId()];
-                bestNode = node;
+        // we are currently in a depot, so route is starting now
+        if(currentNode.isDepot()) {
+            int startingTime = Integer.MAX_VALUE;
+            Node nextNode = null;
+            // find the node which time windows starts the earliest, also the distance if there are multiple
+            for(Node node : nodeList) {
+                if(node.getTimeStart() < startingTime && customerNodeAndNotVisitedYet(node)) {
+                    nextNode = node;
+                    startingTime = node.getTimeStart();
+                }
             }
+            assert nextNode != null;
+            // set the vehicle's current time that it's the starting time of the node upon arrival
+            vehicle.setCurrentTime((float)nextNode.getTimeStart());
+            return nextNode;
+        } else {
+            float distance = Float.MAX_VALUE;
+            float currentTime = vehicle.getCurrentTime();
+            Node nextNode = new Node();
+            // set the node to a so-called null node, so when the algorithm doesn't find a feasible node, we can
+            // notify the solver
+            nextNode.setNullNode(true);
+            // find the next node for the route of the vehicle, where:
+            // - the node is not visited yet, and it's not a depot or dumping site
+            // - the travel time will not exceed the maximum travel time of the vehicle
+            // - the vehicle arrives to the node between the time window of the given node
+            // - the distance between the current node and the next node is the shortest
+            for(Node node : nodeList) {
+                float travelDistance = getDistanceBetweenNode(currentNode, node);
+                if(customerNodeAndNotVisitedYet(node)
+                        && capacityCheck(vehicle, node)
+                        && !maxTravelTimeCheck(vehicle, currentNode, node)
+                        && timeWindowCheck(currentTime + travelDistance, node)
+                        && travelDistance < distance) {
+                    // if a feasible node is found, set it
+                    distance = travelDistance;
+                    nextNode = node;
+                }
+            }
+            return nextNode;
         }
-        return bestNode;
     }
 
     private boolean capacityCheck(Vehicle vehicle, Node node) {
-        return vehicle.getCapacity() + node.getQuantity() < vehicle.getMaximumCapacity();
+        return vehicle.getCapacity() + node.getQuantity() <= vehicle.getMaximumCapacity();
     }
 
     private boolean maxTravelTimeCheck(Vehicle vehicle, Node currentNode, Node nextNode) {
         Node nearestDumpingSite = getNearestDumpingSiteNode(nextNode);
-        return vehicle.getCurrentTime()
-                + matrix[currentNode.getId()][nextNode.getId()]
-                + matrix[nextNode.getId()][nearestDumpingSite.getId()]
-                + matrix[nearestDumpingSite.getId()][getDepotNode().getId()]
-                < vehicle.getMaximumTravelTime();
+        float currentTravelTime = vehicle.getTravelTime();
+        float travelDistanceFromCurrentNodeToNextNode = matrix[currentNode.getId()][nextNode.getId()];
+        float travelDistanceFromNextNodeToDumpingSite = matrix[nextNode.getId()][nearestDumpingSite.getId()];
+        float travelDistanceFromDumpingSiteToDepot = matrix[nearestDumpingSite.getId()][getDepotNode().getId()];
+        float travelTime = currentTravelTime
+                + travelDistanceFromCurrentNodeToNextNode
+                + travelDistanceFromNextNodeToDumpingSite
+                + travelDistanceFromDumpingSiteToDepot;
+        return travelTime
+                > vehicle.getMaximumTravelTime();
     }
 
-    private Node getNearestDumpingSiteNode(Node nextNode) {
+    public Node getNearestDumpingSiteNode(Node nextNode) {
         Float bestDistance = Float.MAX_VALUE;
         Node nearestDumpingSite = null;
         for(Node node : nodeList) {
-            if(node.getDumpingSite()) {
-                Float distance = matrix[nextNode.getId()][node.getId()];
+            if(node.isDumpingSite()) {
+                Float distance = getDistanceBetweenNode(nextNode, node);
                 if(distance < bestDistance) {
                     bestDistance = distance;
                     nearestDumpingSite = node;
@@ -122,19 +195,31 @@ public class Data {
         return nearestDumpingSite;
     }
 
-    private boolean travelCheck(float arrivalTime, Node node) {
-        return arrivalTime > node.getTimeStart() && arrivalTime < node.getTimeEnd();
+    public boolean timeWindowCheck(float arrivalTime, Node node) {
+        return arrivalTime >= node.getTimeStart() && arrivalTime <= node.getTimeEnd();
     }
 
-    private boolean customerNode(Node node) {
-        return !node.getGhostNode() && !node.getDepot() && !node.getDumpingSite();
+    public boolean customerNode(Node node) {
+        return !node.isGhostNode() && !node.isDepot() && !node.isDumpingSite();
     }
 
     private boolean customerNodeAndNotVisitedYet(Node node) {
-        return customerNode(node) && !node.getVisited();
+        return customerNode(node) && !node.isVisited();
     }
 
     public float getDistanceBetweenNode(Node nodeFrom, Node nodeTo) {
         return matrix[nodeFrom.getId()][nodeTo.getId()];
+    }
+
+    public void destroyInfo() {
+        for(Vehicle vehicle : fleet) {
+            vehicle.setCapacity(0);
+            vehicle.setTravelTime((float) 0);
+            vehicle.setCurrentTime((float) 0);
+            for(Node node : vehicle.getRoute()) {
+                node.setVisited(false); // TODO: ???
+                node.setVisitedAt((float) 0);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 import data.Data;
+import data.FileSection;
 import data.Node;
 import data.Vehicle;
 
@@ -81,10 +82,16 @@ public class Parser {
                         data.setInfo(datasetAndName[1].strip());
                         String dataSetSize = datasetAndName[1].strip().split("_")[1];
                         size = getDataSetSize(dataSetSize) + 1;
-                        System.out.println(size);
+                        //System.out.println(size);
                         // setting dumping sites
-                        dumpingSizes = getDumpingSiteNodeIds(size, 3);
-                        System.out.println(dumpingSizes);
+                        // dumpingSizes = getDumpingSiteNodeIds(size, 3);
+                        // dummy
+                        dumpingSizes = new HashSet<>();
+                        dumpingSizes.add(1);
+                        //dumpingSizes.add(2);
+                        //dumpingSizes.add(4);
+                        //dumpingSizes.add(6);
+                        //System.out.println(dumpingSizes);
                         matrix = new Float[size][size];
                         idx++; continue;
                     }
@@ -127,8 +134,9 @@ public class Parser {
                         vehicle.setType(Integer.parseInt(vehicleAttributes[0]));
                         vehicle.setDepartureNode(data.getNodeOnIndex(Integer.parseInt(vehicleAttributes[1])));
                         vehicle.setArrivalNode(data.getNodeOnIndex(Integer.parseInt(vehicleAttributes[2])));
-                        vehicle.setMaximumCapacity(Float.parseFloat(vehicleAttributes[3]));
+                        vehicle.setMaximumCapacity((int)Float.parseFloat(vehicleAttributes[3]));
                         vehicle.setMaximumTravelTime(Float.parseFloat(vehicleAttributes[4]));
+                        vehicle.setId(data.getFleet().size());
                         data.addVehicle(vehicle);
                     }
                     else if (getSection().equals(FileSection.MATRIX))

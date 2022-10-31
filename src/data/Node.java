@@ -12,10 +12,11 @@ public class Node {
     private Float serviceTime;
 
     private Boolean visited;
-    private  Boolean ghostNode;
+    private Boolean ghostNode;
     private Boolean depot;
     private Boolean dumpingSite;
     private Boolean nullNode;
+    private Float visitedAt;
 
     public Node() {
         this.visited = false;
@@ -25,15 +26,59 @@ public class Node {
         this.nullNode = false;
     }
 
+    public Node(Node node) {
+        this.id = node.getId();
+        this.cx = node.getCx();
+        this.cy = node.getCy();
+        this.quantity = node.getQuantity();
+        this.timeStart = node.getTimeStart();
+        this.timeEnd = node.getTimeEnd();
+        this.serviceTime = node.getServiceTime();
+        this.visited = node.getVisited();
+        this.ghostNode = node.getGhostNode();
+        this.depot = node.getDepot();
+        this.dumpingSite = node.getDumpingSite();
+        this.nullNode = node.getNullNode();
+        this.visitedAt = node.getVisitedAt();
+    }
+
+    public Boolean getVisited() {
+        return visited;
+    }
+
+    public Boolean getGhostNode() {
+        return ghostNode;
+    }
+
+    public Boolean getDepot() {
+        return depot;
+    }
+
+    public Boolean getDumpingSite() {
+        return dumpingSite;
+    }
+
     public Boolean getNullNode() {
         return nullNode;
+    }
+
+    public Boolean isNullNode() {
+        return nullNode;
+    }
+
+    public Float getVisitedAt() {
+        return visitedAt;
+    }
+
+    public void setVisitedAt(Float visitedAt) {
+        this.visitedAt = visitedAt;
     }
 
     public void setNullNode(Boolean nullNode) {
         this.nullNode = nullNode;
     }
 
-    public Boolean getDumpingSite() {
+    public Boolean isDumpingSite() {
         return dumpingSite;
     }
 
@@ -41,7 +86,7 @@ public class Node {
         this.dumpingSite = dumpingSite;
     }
 
-    public Boolean getDepot() {
+    public Boolean isDepot() {
         return depot;
     }
 
@@ -50,7 +95,7 @@ public class Node {
     }
 
 
-    public Boolean getGhostNode() {
+    public Boolean isGhostNode() {
         return ghostNode;
     }
 
@@ -58,7 +103,7 @@ public class Node {
         this.ghostNode = ghostNode;
     }
 
-    public Boolean getVisited() {
+    public Boolean isVisited() {
         return visited;
     }
 
