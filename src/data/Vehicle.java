@@ -157,7 +157,7 @@ public class Vehicle {
         }
         int currentIdx = 0;
         float travelDistance;
-        Node currentNode = route.get(0);
+        Node currentNode = route.get(currentIdx);
         Node dumpingSite;
         setCapacity(Math.round(currentNode.getQuantity()));
         float distance = data.getDistanceBetweenNode(data.getDepotNode(), currentNode);

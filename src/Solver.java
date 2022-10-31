@@ -149,6 +149,72 @@ public class Solver {
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
         float bestValue = getDataValue(data, false);
         int inserted = 0;
+        Node nodeToInsert;
+        while (inserted < nodesToSwap.size()) {
+            nodeToInsert = nodesToSwap.get(0);
+            nodesToSwap.remove(nodeToInsert);
+            for(Vehicle vehicle : data.getFleet()) {
+                int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
+                for(int i = 0; i < firstGhostNodeIdx; i++) {
+                    List<Node> copiedRoute = vehicle.copyRoute();
+                    vehicle.getRoute().add(i, nodeToInsert);
+                    for(int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
+                        vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
+                    }
+                    vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
+                    boolean valid = checkForValidity(data, vehicle);
+                    System.out.println(valid);
+                }
+            }
+
+
+
+            inserted++;
+
+        }
+    }
+
+    private boolean checkForValidity(Data data, Vehicle vehicle) {
+        List<Node> route = vehicle.getRoute();
+        if(route.get(0).isGhostNode()) {
+            return true;
+        }
+        int currentIdx = 0;
+        float travelDistance;
+        Node currentNode = route.get(currentIdx);
+        vehicle.setCapacity(0);
+        Node dumpingSite;
+        while (!currentNode.isGhostNode()) {
+            Node nextNode = route.get(currentIdx + 1);
+            if(!nextNode.isGhostNode()) {
+                if(vehicle.getCapacity() + nextNode.getQuantity() <= vehicle.getMaximumCapacity()) {
+                    currentIdx = currentNode.getTimeEnd();
+                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
+                    if(data.timeWindowCheckWithWaitingTime(currentNode, nextNode, travelDistance)) {
+                        return false;
+                    }
+                    vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
+                    currentNode = nextNode;
+                } else {
+                    dumpingSite = data.getNearestDumpingSiteNode(currentNode);
+                    vehicle.setCapacity(0);
+                    currentNode = dumpingSite;
+
+                    nextNode = route.get(currentIdx + 1);
+                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
+                    nextNodeTimeStart = nextNode.getTimeStart();
+                    if(!data.timeWindowCheck(nextNodeTimeStart - (currentNode.getServiceTime() + travelDistance), currentNode)) {
+                        return false;
+                    }
+                    vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
+                    currentNode = nextNode;
+                }
+                currentIdx++;
+            } else {
+                break;
+            }
+        }
+        return true;
     }
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {

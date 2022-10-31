@@ -222,4 +222,8 @@ public class Data {
             }
         }
     }
+
+    public boolean timeWindowCheckWithWaitingTime(Node currentNode, Node nextNode, float travelDistance) {
+        return currentNode.getTimeStart() + currentNode.getServiceTime() + travelDistance
+    }
 }
