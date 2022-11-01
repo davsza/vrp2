@@ -223,7 +223,16 @@ public class Data {
         }
     }
 
-    public boolean timeWindowCheckWithWaitingTime(Node currentNode, Node nextNode, float travelDistance) {
-        return currentNode.getTimeStart() + currentNode.getServiceTime() + travelDistance
+    public boolean timeWindowCheckWithWaitingTime(Node currentNode, Node nextNode, float currentTime, float travelTime) {
+        return currentTime + currentNode.getServiceTime() + travelTime <= nextNode.getTimeEnd();
+    }
+
+    public Vehicle getPenaltyVehicle() {
+        for(Vehicle vehicle : fleet) {
+            if(vehicle.isPenaltyVehicle()) {
+                return vehicle;
+            }
+        }
+        return null;
     }
 }

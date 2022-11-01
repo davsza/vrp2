@@ -16,6 +16,7 @@ public class Vehicle {
 
     private Integer maximumCapacity;
     private Integer id;
+    private Boolean penaltyVehicle;
 
     public Vehicle() {
         this.route = new ArrayList<>();
@@ -35,10 +36,19 @@ public class Vehicle {
         this.currentTime = vehicle.getCurrentTime();
         this.maximumCapacity = vehicle.getMaximumCapacity();
         this.id = vehicle.getId();
+        this.penaltyVehicle = vehicle.isPenaltyVehicle();
     }
 
     public List<Node> getRoute() {
         return route;
+    }
+
+    public Boolean isPenaltyVehicle() {
+        return penaltyVehicle;
+    }
+
+    public void setPenaltyVehicle(Boolean penaltyVehicle) {
+        this.penaltyVehicle = penaltyVehicle;
     }
 
     public Integer getMaximumCapacity() {
@@ -121,6 +131,7 @@ public class Vehicle {
         setCurrentTime((float) 0);
         setCapacity(0);
         setTravelTime((float)0);
+        setPenaltyVehicle(false);
         for(int i = 0; i < size; i++) {
             Node node = new Node();
             node.setGhostNode(true);
@@ -154,6 +165,9 @@ public class Vehicle {
     public Float calculateTravelDistance(Data data, boolean timeWindow) {
         if(route.get(0).isGhostNode()) {
             return (float)0;
+        }
+        if(isPenaltyVehicle()) {
+            return (float)500;
         }
         int currentIdx = 0;
         float travelDistance;

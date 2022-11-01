@@ -22,6 +22,10 @@ public class Solver {
 
         // init vehicles
         for(Vehicle vehicle : data.getFleet()) vehicle.initVehicle(data.getNodeListSize());
+        Vehicle penaltyVehicle = new Vehicle();
+        penaltyVehicle.initVehicle(data.getNodeListSize());
+        penaltyVehicle.setPenaltyVehicle(true);
+        data.getFleet().add(penaltyVehicle);
 
         // the first vehicle starts from the depot
         Node currentNode = data.getDepotNode();
@@ -128,7 +132,7 @@ public class Solver {
         while(T > 0.1) {
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
-            destroyNodes(currentData, 2, nodesToSwap);
+            destroyNodes(currentData, 1, nodesToSwap);
             repairNodes(currentData, nodesToSwap);
             newValue = getDataValue(currentData, false);
             //delta = newValue - currentValue;
@@ -149,9 +153,11 @@ public class Solver {
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
         float bestValue = getDataValue(data, false);
         int inserted = 0;
-        Node nodeToInsert;
+        Vehicle vehicleToInsertInto = null;
+        int indexToInsert = 0;
+        boolean foundVehicleForNodeToInsert = false;
         while (inserted < nodesToSwap.size()) {
-            nodeToInsert = nodesToSwap.get(0);
+            Node nodeToInsert = nodesToSwap.get(0);
             nodesToSwap.remove(nodeToInsert);
             for(Vehicle vehicle : data.getFleet()) {
                 int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
@@ -163,14 +169,30 @@ public class Solver {
                     }
                     vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
                     boolean valid = checkForValidity(data, vehicle);
-                    System.out.println(valid);
+                    if(valid) {
+                        float currentValue = getDataValue(data, true);
+                        if(currentValue < bestValue) {
+                            bestValue = currentValue;
+                            vehicleToInsertInto = vehicle;
+                            indexToInsert = i;
+                            foundVehicleForNodeToInsert = true;
+                        }
+                    }
+                    vehicle.setRoute(copiedRoute);
                 }
             }
-
-
-
             inserted++;
-
+            if(foundVehicleForNodeToInsert) {
+                vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
+            } else {
+                Vehicle penaltyVehicle = data.getPenaltyVehicle();
+                penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
+                int firstGhostNodeIdx = penaltyVehicle.getFirstGhostNode().getId();
+                for(int j = firstGhostNodeIdx + 1; j < penaltyVehicle.getRoute().size() - 1; j++) {
+                    penaltyVehicle.getRoute().get(j).setId(penaltyVehicle.getRoute().get(j).getId() + 1);
+                }
+                penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
+            }
         }
     }
 
@@ -182,31 +204,34 @@ public class Solver {
         int currentIdx = 0;
         float travelDistance;
         Node currentNode = route.get(currentIdx);
+        float currentTime = currentNode.getTimeStart();
         vehicle.setCapacity(0);
         Node dumpingSite;
         while (!currentNode.isGhostNode()) {
             Node nextNode = route.get(currentIdx + 1);
             if(!nextNode.isGhostNode()) {
                 if(vehicle.getCapacity() + nextNode.getQuantity() <= vehicle.getMaximumCapacity()) {
-                    currentIdx = currentNode.getTimeEnd();
                     travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    if(data.timeWindowCheckWithWaitingTime(currentNode, nextNode, travelDistance)) {
+                    if(!data.timeWindowCheckWithWaitingTime(currentNode, nextNode, currentTime, travelDistance)) {
                         return false;
                     }
                     vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
+                    currentTime = Math.max(currentTime + currentNode.getServiceTime() + travelDistance, nextNode.getTimeStart());
                     currentNode = nextNode;
                 } else {
                     dumpingSite = data.getNearestDumpingSiteNode(currentNode);
+                    travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSite);
                     vehicle.setCapacity(0);
+                    currentTime += travelDistance + dumpingSite.getServiceTime();
                     currentNode = dumpingSite;
 
                     nextNode = route.get(currentIdx + 1);
                     travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    nextNodeTimeStart = nextNode.getTimeStart();
-                    if(!data.timeWindowCheck(nextNodeTimeStart - (currentNode.getServiceTime() + travelDistance), currentNode)) {
+                    if(!data.timeWindowCheckWithWaitingTime(currentNode, nextNode, currentTime, travelDistance)) {
                         return false;
                     }
                     vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
+                    currentTime = Math.max(currentTime + currentNode.getServiceTime() + travelDistance, nextNode.getTimeStart());
                     currentNode = nextNode;
                 }
                 currentIdx++;
