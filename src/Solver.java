@@ -3,6 +3,7 @@ import data.Node;
 import data.Vehicle;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Solver {
@@ -126,22 +127,28 @@ public class Solver {
         float T = 90;
         data.destroyInfo();
         Data bestData = new Data(data);
+        float bestValue = getDataValue(bestData, true);
         Data currentData;
         float currentValue, newValue;
-        List<Node> nodesToSwap = new ArrayList<>();
+        List<Node> nodesToSwap;
         while(T > 0.1) {
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
+            nodesToSwap = new ArrayList<>();
             destroyNodes(currentData, 1, nodesToSwap);
             repairNodes(currentData, nodesToSwap);
             newValue = getDataValue(currentData, false);
-            //delta = newValue - currentValue;
-            //if(newValue better currentValue) {
-            //    data = currentData;
-            //} else if (Math.exp(delta / T) > Math.random()) {
-            //    data = currentData;
-            //}
-            //update information about performance of dstroy and repair methods
+            float delta = currentValue - newValue;
+            if(delta > 0) {
+                data = currentData;
+            } else if (Math.exp(delta / T) > Math.random()) {
+                data = currentData;
+            }
+            if(newValue < bestValue) {
+                bestValue = newValue;
+                bestData = new Data(data);
+            }
+            //update information about performance of destroy and repair methods
             T *= 0.99;
         }
     }
@@ -152,36 +159,36 @@ public class Solver {
 
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
         float bestValue = getDataValue(data, false);
-        int inserted = 0;
         Vehicle vehicleToInsertInto = null;
         int indexToInsert = 0;
         boolean foundVehicleForNodeToInsert = false;
-        while (inserted < nodesToSwap.size()) {
+        while (nodesToSwap.size() > 0) {
             Node nodeToInsert = nodesToSwap.get(0);
             nodesToSwap.remove(nodeToInsert);
             for(Vehicle vehicle : data.getFleet()) {
-                int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
-                for(int i = 0; i < firstGhostNodeIdx; i++) {
-                    List<Node> copiedRoute = vehicle.copyRoute();
-                    vehicle.getRoute().add(i, nodeToInsert);
-                    for(int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
-                        vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
-                    }
-                    vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
-                    boolean valid = checkForValidity(data, vehicle);
-                    if(valid) {
-                        float currentValue = getDataValue(data, true);
-                        if(currentValue < bestValue) {
-                            bestValue = currentValue;
-                            vehicleToInsertInto = vehicle;
-                            indexToInsert = i;
-                            foundVehicleForNodeToInsert = true;
+                if (!vehicle.isPenaltyVehicle()) {
+                    int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
+                    for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
+                        List<Node> copiedRoute = vehicle.copyRoute();
+                        vehicle.getRoute().add(i, nodeToInsert);
+                        for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
+                            vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
                         }
+                        vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
+                        boolean valid = checkForValidity(data, vehicle);
+                        if (valid) {
+                            float currentValue = getDataValue(data, true);
+                            if (currentValue < bestValue) {
+                                bestValue = currentValue;
+                                vehicleToInsertInto = vehicle;
+                                indexToInsert = i;
+                                foundVehicleForNodeToInsert = true;
+                            }
+                        }
+                        vehicle.setRoute(copiedRoute);
                     }
-                    vehicle.setRoute(copiedRoute);
                 }
             }
-            inserted++;
             if(foundVehicleForNodeToInsert) {
                 vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
             } else {
