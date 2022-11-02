@@ -2,9 +2,7 @@ import data.Data;
 import data.Node;
 import data.Vehicle;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class Solver {
 
@@ -100,27 +98,7 @@ public class Solver {
             }
         }
 
-        boolean passed = checkSolution(data);
-        System.out.println(!passed ? "failed" : "");
-
-        System.out.println("---------------------");
-        for(Vehicle vehicle : data.getFleet()) {
-            System.out.print("Vehicle nr " + vehicle.getId() + ", capacity:" + vehicle.getCapacity() + ", time: " + vehicle.getCurrentTime() + ": ");
-            for(Node node : vehicle.getRoute()) {
-                if(!node.isGhostNode()) {
-                    System.out.print(node.getId() + " ");
-                }
-            }
-            System.out.println(", distance: " + vehicle.calculateTravelDistance(data, false));
-            System.out.println();
-        }
-
-        float value = getDataValue(data, true);
-
-        //System.out.println("---------------------");
-        //for(Node node : data.getNodeList()) {
-        //    System.out.println("Node " + node.getId() + ", time window starts at " + node.getTimeStart() + ", vehicle arrives at " + node.getVisitedAt() + ", time windows ends at " + node.getTimeEnd());
-        //}
+        basicInfo(false, data, true, "Greedy");
     }
 
     public void ALNS(Data data) {
@@ -135,7 +113,7 @@ public class Solver {
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
             nodesToSwap = new ArrayList<>();
-            destroyNodes(currentData, 1, nodesToSwap);
+            destroyNodes(currentData, 5, nodesToSwap);
             repairNodes(currentData, nodesToSwap);
             newValue = getDataValue(currentData, false);
             float delta = currentValue - newValue;
@@ -151,6 +129,8 @@ public class Solver {
             //update information about performance of destroy and repair methods
             T *= 0.99;
         }
+
+        basicInfo(false, bestData, false, "ALNS");
     }
 
     private void repairNodes(Data data, List<Node> nodesToSwap) {
@@ -158,11 +138,13 @@ public class Solver {
     }
 
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
-        float bestValue = getDataValue(data, false);
+        float initialValue = getDataValue(data, false);
+        float bestDiff;
         Vehicle vehicleToInsertInto = null;
         int indexToInsert = 0;
         boolean foundVehicleForNodeToInsert = false;
         while (nodesToSwap.size() > 0) {
+            bestDiff = Float.MAX_VALUE;
             Node nodeToInsert = nodesToSwap.get(0);
             nodesToSwap.remove(nodeToInsert);
             for(Vehicle vehicle : data.getFleet()) {
@@ -177,9 +159,10 @@ public class Solver {
                         vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
                         boolean valid = checkForValidity(data, vehicle);
                         if (valid) {
-                            float currentValue = getDataValue(data, true);
-                            if (currentValue < bestValue) {
-                                bestValue = currentValue;
+                            float currentValue = getDataValue(data, false);
+                            float diff = currentValue - initialValue;
+                            if (diff <= bestDiff) {
+                                bestDiff = diff;
                                 vehicleToInsertInto = vehicle;
                                 indexToInsert = i;
                                 foundVehicleForNodeToInsert = true;
@@ -191,6 +174,11 @@ public class Solver {
             }
             if(foundVehicleForNodeToInsert) {
                 vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
+                int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
+                for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
+                    vehicleToInsertInto.getRoute().get(j).setId(vehicleToInsertInto.getRoute().get(j).getId() + 1);
+                }
+                vehicleToInsertInto.getRoute().remove(vehicleToInsertInto.getRoute().size() - 1);
             } else {
                 Vehicle penaltyVehicle = data.getPenaltyVehicle();
                 penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
@@ -251,6 +239,30 @@ public class Solver {
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {
         worstRemove(data, p, nodesToSwap);
+        //randomRemoval(data, p, nodesToSwap);
+    }
+
+    private void randomRemoval(Data data, int p, List<Node> nodesToSwap) {
+        int nodeIdMax = data.getNodeListSize() - 1;
+        List<Integer> dumpingSites = data.getDumpingSites();
+        Set<Integer> indexesToRemove = new HashSet<>();
+        Random random = new Random();
+        while (indexesToRemove.size() < p) {
+            int next = random.nextInt(nodeIdMax) + 1;
+            if(!dumpingSites.contains(next)) {
+                indexesToRemove.add(next);
+            }
+        }
+        for(Vehicle vehicle : data.getFleet()) {
+            for(int i = 0; i < vehicle.getRoute().size(); i++) {
+                Node node = vehicle.getRoute().get(i);
+                if(!node.isGhostNode() && indexesToRemove.contains(node.getId())) {
+                    nodesToSwap.add(node);
+                    vehicle.removeNode(node);
+                    i--;
+                }
+            }
+        }
     }
 
     private void worstRemove(Data data, int p, List<Node> nodesToSwap) {
@@ -310,5 +322,29 @@ public class Solver {
             overallDistance += distance;
         }
         return overallDistance;
+    }
+
+    private void basicInfo(boolean print, Data bestData, boolean timeWindow, String name){
+        if(print) {
+            System.out.println("---------------------");
+            System.out.println(name);
+            for(Vehicle vehicle : bestData.getFleet()) {
+                if(!vehicle.getRoute().get(0).isGhostNode()) {
+                    System.out.print("Vehicle " + vehicle.getId() + ": ");
+                    for(Node node : vehicle.getRoute()) {
+                        if(!node.isGhostNode()) {
+                            System.out.print(node.getId() + " ");
+                        }
+                    }
+                    System.out.println(", distance: " + vehicle.calculateTravelDistance(bestData, timeWindow));
+                    System.out.print(", valid: " + checkForValidity(bestData, vehicle));
+                    System.out.println();
+                }
+            }
+            float value = getDataValue(bestData, timeWindow);
+            System.out.println();
+            System.out.println("Total distance: " + value);
+            System.out.println("---------------------");
+        }
     }
 }

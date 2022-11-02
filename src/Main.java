@@ -17,10 +17,17 @@ public class Main {
 
         Solver solver = new Solver(dataList, "C:\\Users\\david\\Documents\\Szakdoga\\results");
         //solver.initGreedy(dataList.get(0));
+        startTime = System.currentTimeMillis();
         for(Data data : dataList) {
             solver.initGreedy(data);
+            endTime = System.currentTimeMillis();
+            System.out.println("Greedy took " + (endTime - startTime) + " milliseconds");
             solver.ALNS(data);
+            endTime = System.currentTimeMillis();
+            System.out.println("ALNS took " + (endTime - startTime) + " milliseconds");
         }
+        endTime = System.currentTimeMillis();
+        System.out.println("Parsing took " + (endTime - startTime) + " milliseconds");
 
 
 

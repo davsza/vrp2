@@ -10,10 +10,12 @@ public class Data {
     private Float[][] matrix;
     private List<Node> nodeList;
     private List<Vehicle> fleet;
+    private List<Integer> dumpingSites;
 
     public Data() {
         this.nodeList = new ArrayList<>();
         this.fleet = new ArrayList<>();
+        this.dumpingSites = new ArrayList<>();
     }
 
     public Data(Data data) {
@@ -22,6 +24,7 @@ public class Data {
         this.matrix = data.getMatrix();
         this.nodeList = copyNodeList(data.getNodeList());
         this.fleet = copyFleet(data.getFleet());
+        this.dumpingSites = data.getDumpingSites();
     }
 
     private List<Vehicle> copyFleet(List<Vehicle> fleet) {
@@ -48,6 +51,14 @@ public class Data {
 
     public Float[][] getMatrix() {
         return matrix;
+    }
+
+    public List<Integer> getDumpingSites() {
+        return dumpingSites;
+    }
+
+    public void setDumpingSites(List<Integer> dumpingSites) {
+        this.dumpingSites = dumpingSites;
     }
 
     public void setNodeList(List<Node> nodeList) {

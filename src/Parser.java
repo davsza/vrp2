@@ -6,6 +6,7 @@ import data.Vehicle;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -68,7 +69,7 @@ public class Parser {
             int size = 0;
             int rowCount = 0;
             Float[][] matrix = null;
-            Set<Integer> dumpingSizes = Collections.EMPTY_SET;
+            Set<Integer> dumpontSites = Collections.EMPTY_SET;
             try
             {
                 Scanner scanner = new Scanner(fileEntry);
@@ -86,12 +87,13 @@ public class Parser {
                         // setting dumping sites
                         // dumpingSizes = getDumpingSiteNodeIds(size, 3);
                         // dummy
-                        dumpingSizes = new HashSet<>();
-                        dumpingSizes.add(1);
+                        dumpontSites = new HashSet<>();
+                        dumpontSites.add(1);
                         //dumpingSizes.add(2);
                         //dumpingSizes.add(4);
                         //dumpingSizes.add(6);
                         //System.out.println(dumpingSizes);
+                        data.setDumpingSites(new ArrayList<>(dumpontSites));
                         matrix = new Float[size][size];
                         idx++; continue;
                     }
@@ -122,7 +124,7 @@ public class Parser {
                             node.setDepot(true);
                         }
 
-                        if(dumpingSizes.contains(data.getNodeListSize())) {
+                        if(dumpontSites.contains(data.getNodeListSize())) {
                             node.setDumpingSite(true);
                         }
                         data.addNode(node);

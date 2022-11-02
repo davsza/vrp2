@@ -181,6 +181,7 @@ public class Vehicle {
                 float visitedAt = currentNode.getVisitedAt();
                 float serviceTime = currentNode.getServiceTime();
                 float travelTime = data.getDistanceBetweenNode(currentNode, nextNode);
+                //TODO: fix this
                 if(getCapacity() + nextNode.getQuantity() <= getMaximumCapacity()
                         && (timeWindow ? data.timeWindowCheck(visitedAt + serviceTime + travelTime, nextNode) : true)) {
                     travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
