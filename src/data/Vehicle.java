@@ -240,4 +240,13 @@ public class Vehicle {
         }
         return route;
     }
+
+    public String routeHash() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for(Node node : route) {
+            String hash = Integer.toHexString(node.getId());
+            stringBuilder.append(hash);
+        }
+        return stringBuilder.toString();
+    }
 }

@@ -246,4 +246,13 @@ public class Data {
         }
         return null;
     }
+
+    public String dataToHash() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for(Vehicle vehicle : fleet) {
+            String hash = vehicle.routeHash();
+            stringBuilder.append(hash);
+        }
+        return stringBuilder.toString();
+    }
 }

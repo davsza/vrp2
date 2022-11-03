@@ -1,4 +1,5 @@
 import data.Data;
+import data.HeuristicWeights;
 import data.Node;
 import data.Vehicle;
 
@@ -8,13 +9,19 @@ public class Solver {
 
     private List<Data> dataList;
     private String logPath;
+    private HeuristicWeights heuristicWeights;
+    private Random random;
+    private List<String> hashes;
 
     public Solver(List<Data> dataList, String logPath) {
         this.dataList = dataList;
         this.logPath = logPath;
+        this.heuristicWeights = new HeuristicWeights();
+        this.random = new Random();
+        this.hashes = new ArrayList<>();
     }
 
-    public void initGreedy(Data data) {
+    public float initGreedy(Data data) {
 
         // TODO: change it to some logger
         //System.out.println("solving " + data.getInfo());
@@ -98,10 +105,10 @@ public class Solver {
             }
         }
 
-        basicInfo(false, data, true, "Greedy");
+        return basicInfo(false, data, true, "Greedy");
     }
 
-    public void ALNS(Data data) {
+    public float ALNS(Data data) {
         float T = 90;
         data.destroyInfo();
         Data bestData = new Data(data);
@@ -109,7 +116,9 @@ public class Solver {
         Data currentData;
         float currentValue, newValue;
         List<Node> nodesToSwap;
+        int iteration = 0;
         while(T > 0.1) {
+            iteration++;
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
             nodesToSwap = new ArrayList<>();
@@ -118,23 +127,64 @@ public class Solver {
             newValue = getDataValue(currentData, false);
             float delta = currentValue - newValue;
             if(delta > 0) {
+                if(newValue >= bestValue) {
+                        addRewardToHeuristics(currentData); // o2?
+                }
                 data = currentData;
             } else if (Math.exp(delta / T) > Math.random()) {
+                addRewardToHeuristics(currentData); // o3?
                 data = currentData;
             }
             if(newValue < bestValue) {
+                addRewardToHeuristics(data); // o1?
                 bestValue = newValue;
                 bestData = new Data(data);
             }
             //update information about performance of destroy and repair methods
-            T *= 0.99;
+            if(iteration % 100 == 0) {
+                updateWeights();
+            }
+            T *= 0.999;
         }
 
-        basicInfo(false, bestData, false, "ALNS");
+        return basicInfo(false, bestData, false, "ALNS");
+    }
+
+    private void doNothing() {
+    }
+
+    private void updateWeights() {
+        heuristicWeights.reset();
+    }
+
+    private void addRewardToHeuristics(Data currentData) {
+        //TODO: add reward values to the heuristics
+        if(hashes.contains(currentData.dataToHash())) {
+
+        } else {
+
+            hashes.add(currentData.dataToHash());
+        }
     }
 
     private void repairNodes(Data data, List<Node> nodesToSwap) {
-        greedyInsert(data, nodesToSwap);
+        float sumOf = heuristicWeights.sumOfRepair();
+        float greedyWeight = heuristicWeights.getGreedyInsert() / sumOf;
+        float regretWeight = heuristicWeights.getRegretInsert() / sumOf;
+        double randomValue = random.nextDouble();
+
+        if(randomValue < greedyWeight) {
+            heuristicWeights.setCurrentInsert(1);
+            greedyInsert(data, nodesToSwap);
+        } else if (randomValue < greedyWeight + regretWeight) {
+            heuristicWeights.setCurrentRemove(2);
+            regretInsert(data, nodesToSwap);
+        }
+
+    }
+
+    private void regretInsert(Data data, List<Node> nodesToSwap) {
+        //TODO
     }
 
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
@@ -238,15 +288,33 @@ public class Solver {
     }
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {
-        worstRemove(data, p, nodesToSwap);
-        //randomRemoval(data, p, nodesToSwap);
+        float sumOf = heuristicWeights.sumOfDestroy();
+        float worstWeight = heuristicWeights.getWorstRemove() / sumOf;
+        float randomWeight = heuristicWeights.getRandomRemove() / sumOf;
+        float relatedWeight = heuristicWeights.getRelatedRemove() / sumOf;
+        double randomValue = random.nextDouble();
+
+        if(randomValue < worstWeight) {
+            heuristicWeights.setCurrentRemove(1);
+            worstRemove(data, p, nodesToSwap);
+        } else if(randomValue < worstWeight + randomWeight) {
+            heuristicWeights.setCurrentRemove(2);
+            randomRemoval(data, p, nodesToSwap);
+        } else if(randomValue < worstWeight + randomWeight + relatedWeight){
+            heuristicWeights.setCurrentRemove(3);
+            relatedRemove(data, p, nodesToSwap);
+        }
+
+    }
+
+    private void relatedRemove(Data data, int p, List<Node> nodesToSwap) {
+        //TODO
     }
 
     private void randomRemoval(Data data, int p, List<Node> nodesToSwap) {
         int nodeIdMax = data.getNodeListSize() - 1;
         List<Integer> dumpingSites = data.getDumpingSites();
         Set<Integer> indexesToRemove = new HashSet<>();
-        Random random = new Random();
         while (indexesToRemove.size() < p) {
             int next = random.nextInt(nodeIdMax) + 1;
             if(!dumpingSites.contains(next)) {
@@ -324,7 +392,7 @@ public class Solver {
         return overallDistance;
     }
 
-    private void basicInfo(boolean print, Data bestData, boolean timeWindow, String name){
+    private float basicInfo(boolean print, Data bestData, boolean timeWindow, String name){
         if(print) {
             System.out.println("---------------------");
             System.out.println(name);
@@ -345,6 +413,8 @@ public class Solver {
             System.out.println();
             System.out.println("Total distance: " + value);
             System.out.println("---------------------");
+            return value;
         }
+        return getDataValue(bestData, timeWindow);
     }
 }

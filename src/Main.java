@@ -13,18 +13,21 @@ public class Main {
         long startTime = System.currentTimeMillis();
         List<Data> dataList = parser.parse();
         long endTime = System.currentTimeMillis();
-        System.out.println("Parsing took " + (endTime - startTime) + " milliseconds");
+        //System.out.println("Parsing took " + (endTime - startTime) + " milliseconds");
 
         Solver solver = new Solver(dataList, "C:\\Users\\david\\Documents\\Szakdoga\\results");
         //solver.initGreedy(dataList.get(0));
         startTime = System.currentTimeMillis();
         for(Data data : dataList) {
-            solver.initGreedy(data);
-            endTime = System.currentTimeMillis();
-            System.out.println("Greedy took " + (endTime - startTime) + " milliseconds");
-            solver.ALNS(data);
-            endTime = System.currentTimeMillis();
-            System.out.println("ALNS took " + (endTime - startTime) + " milliseconds");
+            System.out.println("-------------------");
+            System.out.println("parsing " + data.getInfo());
+            float greedy = solver.initGreedy(data);
+            //endTime = System.currentTimeMillis();
+            //System.out.println("Greedy took " + (endTime - startTime) + " milliseconds");
+            float alns = solver.ALNS(data);
+            System.out.println("greedy: " + greedy + "; alns: " + alns + ", improvement: " + ((int)((1-alns/greedy) * 10000) / 100) + "%");
+            //endTime = System.currentTimeMillis();
+            //System.out.println("ALNS took " + (endTime - startTime) + " milliseconds");
         }
         endTime = System.currentTimeMillis();
         System.out.println("Parsing took " + (endTime - startTime) + " milliseconds");

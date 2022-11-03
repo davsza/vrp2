@@ -64,7 +64,7 @@ public class Parser {
     {
         for(File fileEntry : Objects.requireNonNull(folder.listFiles()))
         {
-            System.out.println("Parsing " + fileEntry.getName());
+            //System.out.println("Parsing " + fileEntry.getName());
             Data data = new Data();
             int size = 0;
             int rowCount = 0;
