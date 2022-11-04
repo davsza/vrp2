@@ -1,6 +1,7 @@
 import data.Data;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
@@ -31,8 +32,6 @@ public class Main {
         }
         endTime = System.currentTimeMillis();
         System.out.println("Parsing took " + (endTime - startTime) + " milliseconds");
-
-
 
         // System.out.println(dataList.get(0).getNodeOnIndex(16).getCy());
         // parser.printMatrices();F

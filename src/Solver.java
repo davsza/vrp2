@@ -1,9 +1,7 @@
-import data.Data;
-import data.HeuristicWeights;
-import data.Node;
-import data.Vehicle;
+import data.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Solver {
 
@@ -105,14 +103,14 @@ public class Solver {
             }
         }
 
-        return basicInfo(true, data, true, "Greedy");
+        return basicInfo(false, data, true, "Greedy");
     }
 
     public float ALNS(Data data) {
         float T = 90;
         data.destroyInfo();
         Data bestData = new Data(data);
-        float bestValue = getDataValue(bestData, true);
+        float bestValue = getDataValue(bestData, false);
         Data currentData;
         float currentValue, newValue;
         List<Node> nodesToSwap;
@@ -125,7 +123,7 @@ public class Solver {
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
             nodesToSwap = new ArrayList<>();
-            destroyNodes(currentData, 5, nodesToSwap);
+            destroyNodes(currentData, 2, nodesToSwap);
             repairNodes(currentData, nodesToSwap);
             newValue = getDataValue(currentData, false);
             float delta = currentValue - newValue;
@@ -161,7 +159,7 @@ public class Solver {
             T *= 0.999;
         }
 
-        return basicInfo(true, bestData, false, "ALNS");
+        return basicInfo(false, bestData, false, "ALNS");
     }
 
     private void updateWeights(HeuristicWeights heuristicWeights, float r) {
@@ -215,6 +213,7 @@ public class Solver {
 
     private void repairNodes(Data data, List<Node> nodesToSwap) {
         greedyInsert(data, nodesToSwap);
+        //regretInsert(data, nodesToSwap, 3);
         /*
         float sumOf = heuristicWeights.sumOfRepair();
         float greedyWeight = heuristicWeights.getGreedyInsertWeight() / sumOf;
@@ -233,50 +232,99 @@ public class Solver {
 
     }
 
-    private void regretInsert(Data data, List<Node> nodesToSwap) {
-        //TODO: valami olyasmi hogy kiszámolni minden node-ra, hogy mennyi a bestValue, meg a 2ndBestValue, ezek különbsége
-        //TODO: és azzal kezdeni, amelyik a legnagyobb, mert ezt regrettelnénk legjobban, stb...
-    }
-
-    private void greedyInsert(Data data, List<Node> nodesToSwap) {
-        //TODO: jelenleg olyan sorrendben rakja be a legjobb helyre, ahogy a listában vannak, viszont valszeg
-        //TODO: olyan sorrendben kellene, hogy azzal kezdeni amelyik a legkevésbé rontja az értéke, és így tovább
-        //TODO: mindegyikre kiszámolni a best diffet, az alapján sorbarendezni és úgy elhelyezni
-        float initialValue = getDataValue(data, false);
-        float bestDiff;
-        Vehicle vehicleToInsertInto = null;
-        int indexToInsert = 0;
-        boolean foundVehicleForNodeToInsert = false;
-        while (nodesToSwap.size() > 0) {
-            bestDiff = Float.MAX_VALUE;
-            Node nodeToInsert = nodesToSwap.get(0);
-            nodesToSwap.remove(nodeToInsert);
-            for(Vehicle vehicle : data.getFleet()) {
-                if (!vehicle.isPenaltyVehicle()) {
-                    int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
-                    for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
-                        List<Node> copiedRoute = vehicle.copyRoute();
-                        vehicle.getRoute().add(i, nodeToInsert);
-                        for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
-                            vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
-                        }
-                        vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
-                        boolean valid = checkForValidity(data, vehicle);
-                        if (valid) {
-                            float currentValue = getDataValue(data, false);
-                            float diff = currentValue - initialValue;
-                            if (diff <= bestDiff) {
-                                bestDiff = diff;
-                                vehicleToInsertInto = vehicle;
-                                indexToInsert = i;
-                                foundVehicleForNodeToInsert = true;
+    private void regretInsert(Data data, List<Node> nodesToSwap, int p) {
+        Vehicle vehicleToInsertInto;
+        Node nodeToInsert;
+        int indexToInsert;
+        while(nodesToSwap.size() > 0) {
+            float initialValue = getDataValue(data, false);
+            List<NodeInsertion> nodeInsertionList = new ArrayList<>();
+            for(Node nodesToInsert : nodesToSwap) {
+                float worstDiff = 0;
+                NodeInsertion nodeInsertion = new NodeInsertion(nodesToInsert);
+                for(Vehicle vehicle : data.getFleet()) {
+                    if (!vehicle.isPenaltyVehicle()) {
+                        int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
+                        for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
+                            List<Node> copiedRoute = vehicle.copyRoute();
+                            vehicle.getRoute().add(i, nodesToInsert);
+                            for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
+                                vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
                             }
+                            vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
+                            boolean valid = checkForValidity(data, vehicle);
+                            if (valid) {
+                                float currentValue = getDataValue(data, false);
+                                nodeInsertion.getValues().add(currentValue);
+                                nodeInsertion.getVehicleSet().add(vehicle);
+                                float diff = currentValue - initialValue;
+                                if(diff > worstDiff) {
+                                    worstDiff = diff;
+                                    nodeInsertion.setVehicle(vehicle);
+                                    nodeInsertion.setIndex(i);
+                                    nodeInsertion.setFoundVehicleForNodeToInsert(true);
+                                }
+                            }
+                            vehicle.setRoute(copiedRoute);
                         }
-                        vehicle.setRoute(copiedRoute);
+                    }
+                }
+                nodeInsertionList.add(nodeInsertion);
+            }
+            Collections.sort(nodeInsertionList, new Comparator<NodeInsertion>() {
+                @Override
+                public int compare(NodeInsertion o1, NodeInsertion o2) {
+                    return (Float.compare(o1.getVehicleSet().size(), o2.getVehicleSet().size()));
+                }
+            });
+            int leastFeasibleVehicleInsert = nodeInsertionList.get(0).getVehicleSet().size();
+
+            NodeInsertion bestInsertion = new NodeInsertion();
+
+            if(leastFeasibleVehicleInsert < p) {
+                List<NodeInsertion> feasibleNodeInsertions = nodeInsertionList
+                        .stream()
+                        .filter(e -> e.getVehicleSet().size() == leastFeasibleVehicleInsert)
+                        .collect(Collectors.toList());
+                float worst = 0;
+                for(NodeInsertion nodeInsertion : feasibleNodeInsertions) {
+                    Collections.sort(nodeInsertion.getValues(), new Comparator<Float>() {
+                        @Override
+                        public int compare(Float o1, Float o2) {
+                            return (Float.compare(o1, o2));
+                        }
+                    });
+                    float bestValue = nodeInsertion.getValues().get(0);
+                    float worstValue = nodeInsertion.getValues().get(nodeInsertion.getValues().size() - 1);
+                    float diff = worstValue - bestValue;
+                    if(diff > worst) {
+                        worst = diff;
+                        bestInsertion = nodeInsertion;
+                    }
+                }
+            } else {
+                float worst = 0;
+                for(NodeInsertion nodeInsertion : nodeInsertionList) {
+                    Collections.sort(nodeInsertion.getValues(), new Comparator<Float>() {
+                        @Override
+                        public int compare(Float o1, Float o2) {
+                            return (Float.compare(o1, o2));
+                        }
+                    });
+                    float bestValue = nodeInsertion.getValues().get(0);
+                    float worstValue = nodeInsertion.getValues().get(p - 1);
+                    float diff = worstValue - bestValue;
+                    if(diff > worst) {
+                        worst = diff;
+                        bestInsertion = nodeInsertion;
                     }
                 }
             }
-            if(foundVehicleForNodeToInsert) {
+
+            vehicleToInsertInto = bestInsertion.getVehicle();
+            nodeToInsert = bestInsertion.getNode();
+            indexToInsert = bestInsertion.getIndex();
+            if(bestInsertion.isFoundVehicleForNodeToInsert()) {
                 vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
                 int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
                 for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
@@ -292,7 +340,84 @@ public class Solver {
                 }
                 penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
             }
+            nodesToSwap.remove(nodeToInsert);
         }
+    }
+
+    private void greedyInsert(Data data, List<Node> nodesToSwap) {
+
+        float bestDiff;
+        Vehicle vehicleToInsertInto = null;
+        int indexToInsert = 0;
+        boolean foundVehicleForNodeToInsert = false;
+        List<NodeInsertion> nodeInsertionList;
+        NodeInsertion nodeInsertion;
+        Node nodeToInsert;
+        float initialValue = getDataValue(data, false);
+        while(nodesToSwap.size() > 0) {
+            nodeInsertionList = new ArrayList<>();
+            for(Node nodesToInsert : nodesToSwap) {
+                bestDiff = Float.MAX_VALUE;
+                for(Vehicle vehicle : data.getFleet()) {
+                    if (!vehicle.isPenaltyVehicle()) {
+                        int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
+                        for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
+                            List<Node> copiedRoute = vehicle.copyRoute();
+                            vehicle.getRoute().add(i, nodesToInsert);
+                            for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
+                                vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
+                            }
+                            vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
+                            boolean valid = checkForValidity(data, vehicle);
+                            if (valid) {
+                                float currentValue = getDataValue(data, false);
+                                float diff = currentValue - initialValue;
+                                if (diff <= bestDiff) {
+                                    bestDiff = diff;
+                                    vehicleToInsertInto = vehicle;
+                                    indexToInsert = i;
+                                    foundVehicleForNodeToInsert = true;
+                                }
+                            }
+                            vehicle.setRoute(copiedRoute);
+                        }
+                    }
+                }
+                nodeInsertion = new NodeInsertion(nodesToInsert, vehicleToInsertInto, bestDiff, indexToInsert, foundVehicleForNodeToInsert);
+                nodeInsertionList.add(nodeInsertion);
+            }
+
+            Collections.sort(nodeInsertionList, new Comparator<NodeInsertion>() {
+                @Override
+                public int compare(NodeInsertion o1, NodeInsertion o2) {
+                    return (Float.compare(o1.getValue(), o2.getValue()));
+                }
+            });
+
+            NodeInsertion bestInsertion = nodeInsertionList.get(0);
+            vehicleToInsertInto = bestInsertion.getVehicle();
+            nodeToInsert = bestInsertion.getNode();
+            indexToInsert = bestInsertion.getIndex();
+            nodeInsertionList.remove(0);
+            if(bestInsertion.isFoundVehicleForNodeToInsert()) {
+                vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
+                int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
+                for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
+                    vehicleToInsertInto.getRoute().get(j).setId(vehicleToInsertInto.getRoute().get(j).getId() + 1);
+                }
+                vehicleToInsertInto.getRoute().remove(vehicleToInsertInto.getRoute().size() - 1);
+            } else {
+                Vehicle penaltyVehicle = data.getPenaltyVehicle();
+                penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
+                int firstGhostNodeIdx = penaltyVehicle.getFirstGhostNode().getId();
+                for(int j = firstGhostNodeIdx + 1; j < penaltyVehicle.getRoute().size() - 1; j++) {
+                    penaltyVehicle.getRoute().get(j).setId(penaltyVehicle.getRoute().get(j).getId() + 1);
+                }
+                penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
+            }
+            nodesToSwap.remove(nodeToInsert);
+        }
+
     }
 
     private boolean checkForValidity(Data data, Vehicle vehicle) {
@@ -343,6 +468,7 @@ public class Solver {
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {
         worstRemove(data, p, nodesToSwap);
+        //relatedRemove(data, p, nodesToSwap, (float)0.3, (float)0.3, (float)0.3);
         /*
         float sumOf = heuristicWeights.sumOfDestroy();
         float worstWeight = heuristicWeights.getWorstRemoveWeight() / sumOf;
@@ -365,8 +491,33 @@ public class Solver {
 
     }
 
-    private void relatedRemove(Data data, int p, List<Node> nodesToSwap) {
-        //TODO
+    private void relatedRemove(Data data, int p, List<Node> nodesToSwap,
+                               float phi, float chi, float psi) {
+        randomRemoval(data, 1, nodesToSwap);
+        while(nodesToSwap.size() < p) {
+            int idx = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
+            Node nodeToCompare = nodesToSwap.get(idx);
+            List<Float> relatednessValues = new ArrayList<>();
+            float bestRelatedness = Float.MAX_VALUE;
+            Node nodeToRemove = null;
+            Vehicle vehicleToRemoveFrom = null;
+            for(Vehicle vehicle : data.getFleet()) {
+                for(Node node : vehicle.getRoute()) {
+                    if(!node.isGhostNode()) {
+                        float relatedness = phi * data.getDistanceBetweenNode(nodeToCompare, node)
+                                //+ chi * Math.abs(data.getTimeNodeVisitedAt(nodeToCompare) - data.getTimeNodeVisitedAt(node))
+                                + psi * Math.abs(nodeToCompare.getQuantity() - node.getQuantity());
+                        if(relatedness < bestRelatedness) {
+                            bestRelatedness = relatedness;
+                            nodeToRemove = node;
+                            vehicleToRemoveFrom = vehicle;
+                        }
+                    }
+                }
+            }
+            vehicleToRemoveFrom.removeNode(nodeToRemove);
+            nodesToSwap.add(nodeToRemove);
+        }
     }
 
     private void randomRemoval(Data data, int p, List<Node> nodesToSwap) {

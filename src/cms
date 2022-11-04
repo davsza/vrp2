@@ -1,0 +1,49 @@
+Solver - Greedy Insert
+
+while (nodesToSwap.size() > 0) {
+    bestDiff = Float.MAX_VALUE;
+    Node nodeToInsert = nodesToSwap.get(0);
+    nodesToSwap.remove(nodeToInsert);
+    for(Vehicle vehicle : data.getFleet()) {
+        if (!vehicle.isPenaltyVehicle()) {
+            int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
+            for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
+                List<Node> copiedRoute = vehicle.copyRoute();
+                vehicle.getRoute().add(i, nodeToInsert);
+                for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
+                    vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
+                }
+                vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
+                boolean valid = checkForValidity(data, vehicle);
+                if (valid) {
+                    float currentValue = getDataValue(data, false);
+                    float diff = currentValue - initialValue;
+                    if (diff <= bestDiff) {
+                        bestDiff = diff;
+                        vehicleToInsertInto = vehicle;
+                        indexToInsert = i;
+                        foundVehicleForNodeToInsert = true;
+                    }
+                }
+                vehicle.setRoute(copiedRoute);
+            }
+        }
+    }
+    if(foundVehicleForNodeToInsert) {
+        vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
+        int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
+        for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
+            vehicleToInsertInto.getRoute().get(j).setId(vehicleToInsertInto.getRoute().get(j).getId() + 1);
+        }
+        vehicleToInsertInto.getRoute().remove(vehicleToInsertInto.getRoute().size() - 1);
+    } else {
+        Vehicle penaltyVehicle = data.getPenaltyVehicle();
+        penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
+        int firstGhostNodeIdx = penaltyVehicle.getFirstGhostNode().getId();
+        for(int j = firstGhostNodeIdx + 1; j < penaltyVehicle.getRoute().size() - 1; j++) {
+            penaltyVehicle.getRoute().get(j).setId(penaltyVehicle.getRoute().get(j).getId() + 1);
+        }
+        penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
+    }
+}
+

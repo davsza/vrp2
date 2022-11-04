@@ -17,6 +17,7 @@ public class Node {
     private Boolean dumpingSite;
     private Boolean nullNode;
     private Float visitedAt;
+    private Float relatednessValue;
 
     public Node() {
         this.visited = false;
@@ -40,6 +41,14 @@ public class Node {
         this.dumpingSite = node.getDumpingSite();
         this.nullNode = node.getNullNode();
         this.visitedAt = node.getVisitedAt();
+    }
+
+    public Float getRelatednessValue() {
+        return relatednessValue;
+    }
+
+    public void setRelatednessValue(Float relatednessValue) {
+        this.relatednessValue = relatednessValue;
     }
 
     public Boolean getVisited() {
