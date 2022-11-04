@@ -228,7 +228,7 @@ public class Data {
             vehicle.setTravelTime((float) 0);
             vehicle.setCurrentTime((float) 0);
             for(Node node : vehicle.getRoute()) {
-                node.setVisited(false); // TODO: ???
+                node.setVisited(false);
                 node.setVisitedAt((float) 0);
             }
         }

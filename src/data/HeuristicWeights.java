@@ -2,30 +2,135 @@ package data;
 
 public class HeuristicWeights {
 
-    private float randomRemove;
-    private float worstRemove;
-    private float relatedRemove;
-    private float greedyInsert;
-    private float regretInsert;
+    private float randomRemoveWeight;
+    private float worstRemoveWeight;
+    private float relatedRemoveWeight;
+    private float greedyInsertWeight;
+    private float regretInsertWeight;
     private int currentRemove; // 1: randomRemove; 2: worstRemove; 3: relatedRemove
     private int currentInsert; // 1: greedyInsert; 2: regretInsert
 
+    private int timesUsedRandomRemove;
+    private int timesUsedWorstRemove;
+    private int timesUsedRelatedRemove;
+    private int timesUsedGreedyInsert;
+    private int timesUsedRegretInsert;
+    private int randomRemoveScore;
+    private int worstRemoveScore;
+    private int RelatedRemoveScore;
+    private int greedyInsertScore;
+    private int regretInsertScore;
+
     public HeuristicWeights() {
-        this.randomRemove = 1;
-        this.worstRemove = 1;
-        this.relatedRemove = 1;
-        this.greedyInsert = 1;
-        this.regretInsert = 1;
+        this.randomRemoveWeight = 1;
+        this.worstRemoveWeight = 1;
+        this.relatedRemoveWeight = 1;
+        this.greedyInsertWeight = 1;
+        this.regretInsertWeight = 1;
         this.currentRemove = -1;
         this.currentInsert = -1;
+        this.timesUsedRandomRemove = 0;
+        this.timesUsedWorstRemove = 0;
+        this.timesUsedRelatedRemove = 0;
+        this.timesUsedGreedyInsert = 0;
+        this.timesUsedRegretInsert = 0;
+        this.randomRemoveScore = 0;
+        this.worstRemoveScore = 0;
+        this.RelatedRemoveScore = 0;
+        this.greedyInsertScore = 0;
+        this.regretInsertScore = 0;
     }
 
     public void reset() {
-        setRandomRemove(0);
-        setWorstRemove(0);
-        setRelatedRemove(0);
-        setGreedyInsert(0);
-        setRegretInsert(0);
+        setRandomRemoveWeight(0);
+        setWorstRemoveWeight(0);
+        setRelatedRemoveWeight(0);
+        setGreedyInsertWeight(0);
+        setRegretInsertWeight(0);
+    }
+
+    public void setTimesUsedRegretInsert(int timesUsedRegretInsert) {
+        this.timesUsedRegretInsert = timesUsedRegretInsert;
+    }
+
+    public int getRandomRemoveScore() {
+        return randomRemoveScore;
+    }
+
+    public void setRandomRemoveScore(int randomRemoveScore) {
+        this.randomRemoveScore = randomRemoveScore;
+    }
+
+    public int getWorstRemoveScore() {
+        return worstRemoveScore;
+    }
+
+    public void setWorstRemoveScore(int worstRemoveScore) {
+        this.worstRemoveScore = worstRemoveScore;
+    }
+
+    public int getRelatedRemoveScore() {
+        return RelatedRemoveScore;
+    }
+
+    public void setRelatedRemoveScore(int relatedRemoveScore) {
+        RelatedRemoveScore = relatedRemoveScore;
+    }
+
+    public int getGreedyInsertScore() {
+        return greedyInsertScore;
+    }
+
+    public void setGreedyInsertScore(int greedyInsertScore) {
+        this.greedyInsertScore = greedyInsertScore;
+    }
+
+    public int getRegretInsertScore() {
+        return regretInsertScore;
+    }
+
+    public void setRegretInsertScore(int regretInsertScore) {
+        this.regretInsertScore = regretInsertScore;
+    }
+
+    public int getTimesUsedRandomRemove() {
+        return timesUsedRandomRemove;
+    }
+
+    public void setTimesUsedRandomRemove(int timesUsedRandomRemove) {
+        this.timesUsedRandomRemove = timesUsedRandomRemove;
+    }
+
+    public int getTimesUsedWorstRemove() {
+        return timesUsedWorstRemove;
+    }
+
+    public void setTimesUsedWorstRemove(int timesUsedWorstRemove) {
+        this.timesUsedWorstRemove = timesUsedWorstRemove;
+    }
+
+    public int getTimesUsedRelatedRemove() {
+        return timesUsedRelatedRemove;
+    }
+
+    public void setTimesUsedRelatedRemove(int timesUsedRelatedRemove) {
+        this.timesUsedRelatedRemove = timesUsedRelatedRemove;
+    }
+
+    public int getTimesUsedGreedyInsert() {
+        return timesUsedGreedyInsert;
+    }
+
+    public void setTimesUsedGreedyInsert(int timesUsedGreedyInsert) {
+        this.timesUsedGreedyInsert = timesUsedGreedyInsert;
+    }
+
+    public int getTimesUsedRegretInsert() {
+        return timesUsedRegretInsert;
+    }
+
+    public void setTimesUsedCurrentInsert(int timesUsedCurrentInsert) {
+        this.timesUsedRegretInsert = timesUsedCurrentInsert;
     }
 
     public int getCurrentRemove() {
@@ -45,50 +150,50 @@ public class HeuristicWeights {
     }
 
     public float sumOfRepair() {
-        return getGreedyInsert() + getRegretInsert();
+        return getGreedyInsertWeight() + getRegretInsertWeight();
     }
 
     public float sumOfDestroy() {
-        return getRandomRemove() + getWorstRemove() + getRelatedRemove();
+        return getRandomRemoveWeight() + getWorstRemoveWeight() + getRelatedRemoveWeight();
     }
 
-    public float getRandomRemove() {
-        return randomRemove;
+    public float getRandomRemoveWeight() {
+        return randomRemoveWeight;
     }
 
-    public void setRandomRemove(float randomRemove) {
-        this.randomRemove = randomRemove;
+    public void setRandomRemoveWeight(float randomRemoveWeight) {
+        this.randomRemoveWeight = randomRemoveWeight;
     }
 
-    public float getWorstRemove() {
-        return worstRemove;
+    public float getWorstRemoveWeight() {
+        return worstRemoveWeight;
     }
 
-    public void setWorstRemove(float worstRemove) {
-        this.worstRemove = worstRemove;
+    public void setWorstRemoveWeight(float worstRemoveWeight) {
+        this.worstRemoveWeight = worstRemoveWeight;
     }
 
-    public float getRelatedRemove() {
-        return relatedRemove;
+    public float getRelatedRemoveWeight() {
+        return relatedRemoveWeight;
     }
 
-    public void setRelatedRemove(float relatedRemove) {
-        this.relatedRemove = relatedRemove;
+    public void setRelatedRemoveWeight(float relatedRemoveWeight) {
+        this.relatedRemoveWeight = relatedRemoveWeight;
     }
 
-    public float getGreedyInsert() {
-        return greedyInsert;
+    public float getGreedyInsertWeight() {
+        return greedyInsertWeight;
     }
 
-    public void setGreedyInsert(float greedyInsert) {
-        this.greedyInsert = greedyInsert;
+    public void setGreedyInsertWeight(float greedyInsertWeight) {
+        this.greedyInsertWeight = greedyInsertWeight;
     }
 
-    public float getRegretInsert() {
-        return regretInsert;
+    public float getRegretInsertWeight() {
+        return regretInsertWeight;
     }
 
-    public void setRegretInsert(float regretInsert) {
-        this.regretInsert = regretInsert;
+    public void setRegretInsertWeight(float regretInsertWeight) {
+        this.regretInsertWeight = regretInsertWeight;
     }
 }

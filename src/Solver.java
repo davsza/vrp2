@@ -105,7 +105,7 @@ public class Solver {
             }
         }
 
-        return basicInfo(false, data, true, "Greedy");
+        return basicInfo(true, data, true, "Greedy");
     }
 
     public float ALNS(Data data) {
@@ -117,7 +117,10 @@ public class Solver {
         float currentValue, newValue;
         List<Node> nodesToSwap;
         int iteration = 0;
+        String hash;
+        int score;
         while(T > 0.1) {
+            score = 0;
             iteration++;
             currentData = new Data(data);
             currentValue = getDataValue(currentData, false);
@@ -126,51 +129,96 @@ public class Solver {
             repairNodes(currentData, nodesToSwap);
             newValue = getDataValue(currentData, false);
             float delta = currentValue - newValue;
+            hash = currentData.dataToHash();
             if(delta > 0) {
                 if(newValue >= bestValue) {
-                        addRewardToHeuristics(currentData); // o2?
+                    if(!hashes.contains(hash)) {
+                        score = 2;
+                        hashes.add(hash);
+                    }
                 }
                 data = currentData;
             } else if (Math.exp(delta / T) > Math.random()) {
-                addRewardToHeuristics(currentData); // o3?
+                if(!hashes.contains(hash)) {
+                    score = 1;
+                    hashes.add(hash);
+                }
                 data = currentData;
             }
             if(newValue < bestValue) {
-                addRewardToHeuristics(data); // o1?
+                if(!hashes.contains(hash)) {
+                    score = 5;
+                    hashes.add(hash);
+                };
                 bestValue = newValue;
                 bestData = new Data(data);
             }
+            updateHeuristicInformation(heuristicWeights, score);
             //update information about performance of destroy and repair methods
             if(iteration % 100 == 0) {
-                updateWeights();
+                updateWeights(heuristicWeights, (float)0.5); //TODO: what is 'r'?
             }
             T *= 0.999;
         }
 
-        return basicInfo(false, bestData, false, "ALNS");
+        return basicInfo(true, bestData, false, "ALNS");
     }
 
-    private void doNothing() {
+    private void updateWeights(HeuristicWeights heuristicWeights, float r) {
+        float newRandomRemoveWeight = heuristicWeights.getRandomRemoveWeight() * (1 - r)
+                + r * (heuristicWeights.getRandomRemoveScore() / (float)heuristicWeights.getTimesUsedRandomRemove());
+        float newWorstRemoveWeight = heuristicWeights.getWorstRemoveWeight() * (1 - r)
+                + r * (heuristicWeights.getWorstRemoveScore() / (float)heuristicWeights.getTimesUsedWorstRemove());
+        float newRelatedRemoveWeight = heuristicWeights.getRelatedRemoveWeight() * (1 - r)
+                + r * (heuristicWeights.getRelatedRemoveScore() / (float)heuristicWeights.getTimesUsedRelatedRemove());
+        float newGreedyInsertWeight = heuristicWeights.getGreedyInsertWeight() * (1 - r)
+                + r * (heuristicWeights.getGreedyInsertScore() / (float)heuristicWeights.getTimesUsedGreedyInsert());
+        float newRegretInsertWeight = heuristicWeights.getRegretInsertWeight() * (1 - r)
+                + r * (heuristicWeights.getRegretInsertScore() / (float)heuristicWeights.getTimesUsedRegretInsert());
+        heuristicWeights.setRandomRemoveWeight(newRandomRemoveWeight);
+        heuristicWeights.setWorstRemoveWeight(newWorstRemoveWeight);
+        heuristicWeights.setRelatedRemoveWeight(newRelatedRemoveWeight);
+        heuristicWeights.setGreedyInsertWeight(newGreedyInsertWeight);
+        heuristicWeights.setRegretInsertWeight(newRegretInsertWeight);
     }
 
-    private void updateWeights() {
-        heuristicWeights.reset();
-    }
+    private void updateHeuristicInformation(HeuristicWeights heuristicWeights, int score) {
+        int destroyHeuristic = heuristicWeights.getCurrentRemove();
+        int repairHeuristic = heuristicWeights.getCurrentInsert();
 
-    private void addRewardToHeuristics(Data currentData) {
-        //TODO: add reward values to the heuristics
-        if(hashes.contains(currentData.dataToHash())) {
-
-        } else {
-
-            hashes.add(currentData.dataToHash());
+        switch (destroyHeuristic){
+            case 1:
+                heuristicWeights.setRandomRemoveScore(heuristicWeights.getRandomRemoveScore() + score);
+                heuristicWeights.setTimesUsedRandomRemove(heuristicWeights.getTimesUsedRandomRemove() + 1);
+            case 2:
+                heuristicWeights.setWorstRemoveScore(heuristicWeights.getWorstRemoveScore() + score);
+                heuristicWeights.setTimesUsedWorstRemove(heuristicWeights.getTimesUsedWorstRemove() + 1);
+            case 3:
+                heuristicWeights.setRelatedRemoveScore(heuristicWeights.getRelatedRemoveScore() + score);
+                heuristicWeights.setTimesUsedRelatedRemove(heuristicWeights.getTimesUsedRelatedRemove() + 1);
+            default:
+                break;
         }
+
+        switch (repairHeuristic) {
+            case 1:
+                heuristicWeights.setGreedyInsertScore(heuristicWeights.getGreedyInsertScore() + score);
+                heuristicWeights.setTimesUsedGreedyInsert(heuristicWeights.getTimesUsedGreedyInsert() + 1);
+            case 2:
+                heuristicWeights.setRegretInsertScore(heuristicWeights.getRegretInsertScore() + score);
+                heuristicWeights.setTimesUsedRegretInsert(heuristicWeights.getTimesUsedRegretInsert() + 1);
+            default:
+                break;
+        }
+
     }
 
     private void repairNodes(Data data, List<Node> nodesToSwap) {
+        greedyInsert(data, nodesToSwap);
+        /*
         float sumOf = heuristicWeights.sumOfRepair();
-        float greedyWeight = heuristicWeights.getGreedyInsert() / sumOf;
-        float regretWeight = heuristicWeights.getRegretInsert() / sumOf;
+        float greedyWeight = heuristicWeights.getGreedyInsertWeight() / sumOf;
+        float regretWeight = heuristicWeights.getRegretInsertWeight() / sumOf;
         double randomValue = random.nextDouble();
 
         if(randomValue < greedyWeight) {
@@ -181,13 +229,19 @@ public class Solver {
             regretInsert(data, nodesToSwap);
         }
 
+         */
+
     }
 
     private void regretInsert(Data data, List<Node> nodesToSwap) {
-        //TODO
+        //TODO: valami olyasmi hogy kiszámolni minden node-ra, hogy mennyi a bestValue, meg a 2ndBestValue, ezek különbsége
+        //TODO: és azzal kezdeni, amelyik a legnagyobb, mert ezt regrettelnénk legjobban, stb...
     }
 
     private void greedyInsert(Data data, List<Node> nodesToSwap) {
+        //TODO: jelenleg olyan sorrendben rakja be a legjobb helyre, ahogy a listában vannak, viszont valszeg
+        //TODO: olyan sorrendben kellene, hogy azzal kezdeni amelyik a legkevésbé rontja az értéke, és így tovább
+        //TODO: mindegyikre kiszámolni a best diffet, az alapján sorbarendezni és úgy elhelyezni
         float initialValue = getDataValue(data, false);
         float bestDiff;
         Vehicle vehicleToInsertInto = null;
@@ -288,10 +342,12 @@ public class Solver {
     }
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {
+        worstRemove(data, p, nodesToSwap);
+        /*
         float sumOf = heuristicWeights.sumOfDestroy();
-        float worstWeight = heuristicWeights.getWorstRemove() / sumOf;
-        float randomWeight = heuristicWeights.getRandomRemove() / sumOf;
-        float relatedWeight = heuristicWeights.getRelatedRemove() / sumOf;
+        float worstWeight = heuristicWeights.getWorstRemoveWeight() / sumOf;
+        float randomWeight = heuristicWeights.getRandomRemoveWeight() / sumOf;
+        float relatedWeight = heuristicWeights.getRelatedRemoveWeight() / sumOf;
         double randomValue = random.nextDouble();
 
         if(randomValue < worstWeight) {
@@ -304,6 +360,8 @@ public class Solver {
             heuristicWeights.setCurrentRemove(3);
             relatedRemove(data, p, nodesToSwap);
         }
+
+         */
 
     }
 
