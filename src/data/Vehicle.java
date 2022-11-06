@@ -8,11 +8,10 @@ public class Vehicle {
     private Integer type;
     private Node departureNode;
     private Node arrivalNode;
-    private Integer capacity;
-    private Float maximumTravelTime;
+    private Float capacity;
+    private Integer maximumNumberOfStopsToVisit;
     private List<Node> route;
     private Float currentTime;
-    private Float travelTime;
 
     private Integer maximumCapacity;
     private Integer id;
@@ -27,7 +26,7 @@ public class Vehicle {
         this.departureNode = vehicle.getDepartureNode();
         this.arrivalNode = vehicle.getArrivalNode();
         this.capacity = vehicle.getCapacity();
-        this.maximumTravelTime = vehicle.getMaximumTravelTime();
+        this.maximumNumberOfStopsToVisit = vehicle.getMaximumNumberOfStopsToVisit();
         this.route = new ArrayList<>();
         for(Node node : vehicle.getRoute()) {
             Node copiedNode = new Node(node);
@@ -71,12 +70,12 @@ public class Vehicle {
         this.arrivalNode = arrivalNode;
     }
 
-    public void setCapacity(Integer capacity) {
+    public void setCapacity(Float capacity) {
         this.capacity = capacity;
     }
 
-    public void setMaximumTravelTime(Float maximumTravelTime) {
-        this.maximumTravelTime = maximumTravelTime;
+    public void setMaximumNumberOfStopsToVisit(Integer maximumNumberOfStopsToVisit) {
+        this.maximumNumberOfStopsToVisit = maximumNumberOfStopsToVisit;
     }
 
     public Integer getType() {
@@ -91,7 +90,7 @@ public class Vehicle {
         return arrivalNode;
     }
 
-    public Integer getCapacity() {
+    public Float getCapacity() {
         return capacity;
     }
 
@@ -99,8 +98,8 @@ public class Vehicle {
         this.route = route;
     }
 
-    public Float getMaximumTravelTime() {
-        return maximumTravelTime;
+    public Integer getMaximumNumberOfStopsToVisit() {
+        return maximumNumberOfStopsToVisit;
     }
 
     public Float getCurrentTime() {
@@ -119,18 +118,9 @@ public class Vehicle {
         return id;
     }
 
-    public Float getTravelTime() {
-        return travelTime;
-    }
-
-    public void setTravelTime(Float travelTime) {
-        this.travelTime = travelTime;
-    }
-
     public void initVehicle(int size) {
         setCurrentTime((float) 0);
-        setCapacity(0);
-        setTravelTime((float)0);
+        setCapacity((float)0);
         setPenaltyVehicle(false);
         for(int i = 0; i < size; i++) {
             Node node = new Node();
@@ -138,6 +128,12 @@ public class Vehicle {
             node.setId(i);
             route.add(node);
         }
+    }
+
+    public void initVehicleKim() {
+        setCurrentTime((float) 0);
+        setCapacity((float)0);
+        setPenaltyVehicle(false);
     }
 
     public void switchNode(Node fromNode, Node toNode) {
@@ -173,7 +169,7 @@ public class Vehicle {
         float travelDistance;
         Node currentNode = route.get(currentIdx);
         Node dumpingSite;
-        setCapacity(Math.round(currentNode.getQuantity()));
+        setCapacity(currentNode.getQuantity());
         float distance = data.getDistanceBetweenNode(data.getDepotNode(), currentNode);
         while(!currentNode.isGhostNode()) {
             Node nextNode = route.get(currentIdx + 1);
@@ -191,7 +187,7 @@ public class Vehicle {
                     dumpingSite = data.getNearestDumpingSiteNode(currentNode);
                     travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSite);
                     distance += travelDistance;
-                    setCapacity(0);
+                    setCapacity((float)0);
                     currentNode = dumpingSite;
 
                     nextNode = route.get(currentIdx + 1);
@@ -209,6 +205,16 @@ public class Vehicle {
             }
         }
         return distance;
+    }
+
+    public float calculateTravelDistanceKim(Data data) {
+        if(route.size() < 1) return 0;
+        float travelDistance = 0;
+        for(int i = 1; i < route.size(); i++) {
+            float travelDistanceBetweenNodes = data.getDistanceBetweenNode(route.get(i - 1), route.get(i));
+            travelDistance += travelDistanceBetweenNodes;
+        }
+        return travelDistance;
     }
 
     public void removeNode(Node nodeToRemove) {

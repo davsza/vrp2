@@ -2,6 +2,7 @@ package data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Data {
 
@@ -129,6 +130,40 @@ public class Data {
         return this.nodeList.get(0);
     }
 
+    public Node findNextNodeKim(Vehicle currentVehicle, Node currentNode) {
+        float distance = Float.MAX_VALUE;
+        Node nextNode = new Node();
+        nextNode.setNullNode(true);
+        List<Node> feasibleNodes = nodeList.stream().filter(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited()).collect(Collectors.toList());
+        for(Node node : feasibleNodes) {
+            float travelDistance = getDistanceBetweenNode(currentNode, node);
+            if(travelDistance < distance
+                    && capacityCheck(currentVehicle, node)
+                    && maximumNodesVisited(currentVehicle)
+                    && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)
+                    && checkForDepotTW(currentVehicle, currentNode)) {
+                distance = travelDistance;
+                nextNode = node;
+            }
+        }
+        return nextNode;
+    }
+
+    private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode) {
+        Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode);
+        float travelDistanceFromCurrentNodeToDumpingSite = getDistanceBetweenNode(currentNode, dumpingSite);
+        float dumpingSiteServiceTime = dumpingSite.getServiceTime();
+        float travelDistanceFromDumpingSiteToDepot = getDistanceBetweenNode(dumpingSite, getDepotNode());
+        return timeWindowCheck(currentVehicle.getCurrentTime()
+                + travelDistanceFromCurrentNodeToDumpingSite
+                + dumpingSiteServiceTime
+                + travelDistanceFromDumpingSiteToDepot, getDepotNode());
+    }
+
+    private boolean maximumNodesVisited(Vehicle currentVehicle) {
+        return currentVehicle.getRoute().size() < currentVehicle.getMaximumNumberOfStopsToVisit();
+    }
+
     public Node findNextNode(Vehicle vehicle, Node currentNode) {
         // we are currently in a depot, so route is starting now
         if(currentNode.isDepot()) {
@@ -161,7 +196,6 @@ public class Data {
                 float travelDistance = getDistanceBetweenNode(currentNode, node);
                 if(customerNodeAndNotVisitedYet(node)
                         && capacityCheck(vehicle, node)
-                        && !maxTravelTimeCheck(vehicle, currentNode, node)
                         && timeWindowCheck(currentTime + travelDistance, node)
                         && travelDistance < distance) {
                     // if a feasible node is found, set it
@@ -177,26 +211,12 @@ public class Data {
         return vehicle.getCapacity() + node.getQuantity() <= vehicle.getMaximumCapacity();
     }
 
-    private boolean maxTravelTimeCheck(Vehicle vehicle, Node currentNode, Node nextNode) {
-        Node nearestDumpingSite = getNearestDumpingSiteNode(nextNode);
-        float currentTravelTime = vehicle.getTravelTime();
-        float travelDistanceFromCurrentNodeToNextNode = matrix[currentNode.getId()][nextNode.getId()];
-        float travelDistanceFromNextNodeToDumpingSite = matrix[nextNode.getId()][nearestDumpingSite.getId()];
-        float travelDistanceFromDumpingSiteToDepot = matrix[nearestDumpingSite.getId()][getDepotNode().getId()];
-        float travelTime = currentTravelTime
-                + travelDistanceFromCurrentNodeToNextNode
-                + travelDistanceFromNextNodeToDumpingSite
-                + travelDistanceFromDumpingSiteToDepot;
-        return travelTime
-                > vehicle.getMaximumTravelTime();
-    }
-
     public Node getNearestDumpingSiteNode(Node nextNode) {
-        Float bestDistance = Float.MAX_VALUE;
+        float bestDistance = Float.MAX_VALUE;
         Node nearestDumpingSite = null;
         for(Node node : nodeList) {
             if(node.isDumpingSite()) {
-                Float distance = getDistanceBetweenNode(nextNode, node);
+                float distance = getDistanceBetweenNode(nextNode, node);
                 if(distance < bestDistance) {
                     bestDistance = distance;
                     nearestDumpingSite = node;
@@ -206,8 +226,25 @@ public class Data {
         return nearestDumpingSite;
     }
 
+    public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode) {
+        float bestDistance = Float.MAX_VALUE;
+        Node nearestDumpingSite = null;
+        for(Node node : nodeList) {
+            if(node.isDumpingSite()) {
+                float travelDistance = getDistanceBetweenNode(currentNode, node);
+                if(travelDistance < bestDistance
+                        && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)) {
+                    bestDistance = travelDistance;
+                    nearestDumpingSite = node;
+                }
+            }
+        }
+        return nearestDumpingSite;
+    }
+
     public boolean timeWindowCheck(float arrivalTime, Node node) {
-        return arrivalTime >= node.getTimeStart() && arrivalTime <= node.getTimeEnd();
+        //return arrivalTime >= node.getTimeStart() && arrivalTime <= node.getTimeEnd();
+        return arrivalTime <= node.getTimeEnd();
     }
 
     public boolean customerNode(Node node) {
@@ -224,10 +261,20 @@ public class Data {
 
     public void destroyInfo() {
         for(Vehicle vehicle : fleet) {
-            vehicle.setCapacity(0);
-            vehicle.setTravelTime((float) 0);
+            vehicle.setCapacity((float)0);
             vehicle.setCurrentTime((float) 0);
             for(Node node : vehicle.getRoute()) {
+                node.setVisited(false);
+                node.setVisitedAt((float) 0);
+            }
+        }
+    }
+
+    public void destroyInfoKim() {
+        for(Vehicle vehicle : fleet) {
+            vehicle.setCapacity((float)0);
+            vehicle.setCurrentTime((float) 0);
+            for(Node node : vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList())) {
                 node.setVisited(false);
                 node.setVisitedAt((float) 0);
             }
@@ -254,5 +301,17 @@ public class Data {
             stringBuilder.append(hash);
         }
         return stringBuilder.toString();
+    }
+
+    public void calculateVisitingTime() {
+        for(Vehicle vehicle : fleet) {
+            vehicle.setCurrentTime((float)getDepotNode().getTimeStart());
+            for(int i = 1; i < vehicle.getRoute().size(); i++) {
+                float serviceTimeAtPreviousNode = vehicle.getRoute().get(i - 1).getServiceTime();
+                float travelTimeBetweenPreviousAndCurrentNode = getDistanceBetweenNode(vehicle.getRoute().get(i - 1), vehicle.getRoute().get(i));
+                float currentTime = vehicle.getCurrentTime() + serviceTimeAtPreviousNode + travelTimeBetweenPreviousAndCurrentNode;
+                vehicle.getRoute().get(i).setVisitedAt(currentTime);
+            }
+        }
     }
 }

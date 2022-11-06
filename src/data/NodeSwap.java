@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class NodeInsertion {
+public class NodeSwap {
 
     private Node node;
     private Vehicle vehicle;
@@ -15,7 +15,7 @@ public class NodeInsertion {
     private Set<Vehicle> vehicleSet;
     private List<Float> values;
 
-    public NodeInsertion(Node node, Vehicle vehicle, float value, int index, boolean foundVehicleForNodeToInsert) {
+    public NodeSwap(Node node, Vehicle vehicle, float value, int index, boolean foundVehicleForNodeToInsert) {
         this.node = node;
         this.vehicle = vehicle;
         this.value = value;
@@ -23,13 +23,13 @@ public class NodeInsertion {
         this.foundVehicleForNodeToInsert = foundVehicleForNodeToInsert;
     }
 
-    public NodeInsertion(Node node) {
+    public NodeSwap(Node node) {
         this.node = node;
         this.vehicleSet = new HashSet<>();
         this.values = new ArrayList<>();
     }
 
-    public NodeInsertion() {
+    public NodeSwap() {
 
     }
 

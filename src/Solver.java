@@ -10,6 +10,7 @@ public class Solver {
     private HeuristicWeights heuristicWeights;
     private Random random;
     private List<String> hashes;
+    private final Constants CONSTANTS;
 
     public Solver(List<Data> dataList, String logPath) {
         this.dataList = dataList;
@@ -17,149 +18,160 @@ public class Solver {
         this.heuristicWeights = new HeuristicWeights();
         this.random = new Random();
         this.hashes = new ArrayList<>();
+        this.CONSTANTS = new Constants();
     }
 
-    public float initGreedy(Data data) {
-
-        // TODO: change it to some logger
-        //System.out.println("solving " + data.getInfo());
-
-        // init vehicles
-        for(Vehicle vehicle : data.getFleet()) vehicle.initVehicle(data.getNodeListSize());
+    public float initGreedyKim(Data data) {
+        //init vehicles
+        for(Vehicle vehicle : data.getFleet()) vehicle.initVehicleKim();
         Vehicle penaltyVehicle = new Vehicle();
-        penaltyVehicle.initVehicle(data.getNodeListSize());
+        penaltyVehicle.initVehicleKim();
         penaltyVehicle.setPenaltyVehicle(true);
         data.getFleet().add(penaltyVehicle);
 
-        // the first vehicle starts from the depot
+        //set the current node to the depot, set the current vehicle, and it's first node to the depot node
         Node currentNode = data.getDepotNode();
         Node nextNode;
         Vehicle currentVehicle = data.getFleet().get(0);
-        float travelDistance;
+        float currentTime;
+        float travelTime;
+        float serviceTime;
+        float quantity;
+        Node dumpingSite;
+        currentVehicle.getRoute().add(currentNode);
+        currentVehicle.setCurrentTime((float)currentNode.getTimeStart());
 
-        // do this until all nodes have been visited
         while(data.hasMoreUnvisitedNodes()){
-            // find the next visitable node
-            nextNode = data.findNextNode(currentVehicle, currentNode);
-            // if it's not a null node, which means is visitable (vehicle found a feasible solution for next node)
+            nextNode = data.findNextNodeKim(currentVehicle, currentNode);
             if(!nextNode.isNullNode()) {
-                // calculate the travel distance between the current node and the next to be visited
-                travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                if(!currentNode.isDepot()) {
-                    currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + travelDistance + nextNode.getServiceTime());
-                } else {
-                    currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + nextNode.getServiceTime());
-                }
-                currentVehicle.setTravelTime(currentVehicle.getTravelTime() + travelDistance + nextNode.getServiceTime());
-                currentVehicle.setCapacity(currentVehicle.getCapacity() + Math.round(nextNode.getQuantity()));
-                currentVehicle.switchNode(currentVehicle.getFirstGhostNode(), nextNode);
+                currentTime = currentVehicle.getCurrentTime();
+                travelTime = data.getDistanceBetweenNode(currentNode, nextNode);
+                serviceTime = nextNode.getServiceTime();
+                quantity = nextNode.getQuantity();
+                currentVehicle.setCurrentTime(Math.max(currentTime + serviceTime + travelTime, nextNode.getTimeStart()));
+                currentVehicle.setCapacity(currentVehicle.getCapacity() + quantity);
+
                 currentNode = nextNode;
                 currentNode.setVisitedAt(currentVehicle.getCurrentTime() - currentNode.getServiceTime());
                 currentNode.setVisited(true);
+                currentVehicle.getRoute().add(currentNode);
             } else {
-                // if the vehicle can't visit a customer, it has to either go to a dumping site or back to the depot
-
-                // if the vehicle is at a dumping site, it's route is over and has to go back to the depot
                 if(currentNode.isDumpingSite()) {
-                    // go to the depot
-                    travelDistance = data.getDistanceBetweenNode(currentNode, data.getDepotNode());
-                    currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + travelDistance);
-                    currentVehicle.setTravelTime(currentVehicle.getTravelTime() + travelDistance);
-                    currentNode = data.getDepotNode();
-                    // switch vehicle
+                    Node depot = data.getDepotNode();
+                    currentTime = currentVehicle.getCurrentTime();
+                    travelTime = data.getDistanceBetweenNode(currentNode, depot);
+                    currentVehicle.setCurrentTime(currentTime + travelTime);
+
+                    currentNode = depot;
+                    currentVehicle.getRoute().add(currentNode);
                     currentVehicle = data.getFleet().get(currentVehicle.getId() + 1);
+
+                    currentVehicle.getRoute().add(data.getDepotNode());
+                    currentVehicle.setCurrentTime((float)data.getDepotNode().getTimeStart());
                     continue;
                 }
-                // find the nearest dumping site, to there, set capacity to 0
-                Node dumpingSize = data.getNearestDumpingSiteNode(currentNode);
-                travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSize);
-                currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + travelDistance + dumpingSize.getServiceTime());
-                currentVehicle.setTravelTime(currentVehicle.getTravelTime() + travelDistance + dumpingSize.getServiceTime());
-                currentVehicle.setCapacity(0);
-                currentNode = dumpingSize;
-                // if the vehicle's travel time is close to it's maximum, send it back to the depot from the dumping site
-                if(currentVehicle.getTravelTime() > currentVehicle.getMaximumTravelTime() * 0.8) {
-                    travelDistance = data.getDistanceBetweenNode(currentNode, data.getDepotNode());
-                    currentVehicle.setCurrentTime(currentVehicle.getCurrentTime() + travelDistance);
-                    currentVehicle.setTravelTime(currentVehicle.getTravelTime() + travelDistance);
-                    currentNode = data.getDepotNode();
-                    currentVehicle = data.getFleet().get(currentVehicle.getId() + 1);
-                }
+                dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode);
+                currentTime = currentVehicle.getCurrentTime();
+                travelTime = data.getDistanceBetweenNode(currentNode, dumpingSite);
+                serviceTime = dumpingSite.getServiceTime();
+                currentVehicle.setCurrentTime(Math.max(currentTime + serviceTime + travelTime, dumpingSite.getTimeStart()));
+                currentVehicle.setCapacity((float)0);
+
+                currentNode = dumpingSite;
+                currentVehicle.getRoute().add(currentNode);
             }
         }
 
-        for(Vehicle vehicle : data.getFleet()) {
-            if(vehicle.getCapacity() != 0) {
-                currentNode = vehicle.getFirstCustomerNode();
-                Node dumpingSize = data.getNearestDumpingSiteNode(currentNode);
-                travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSize);
-                vehicle.setCurrentTime(vehicle.getCurrentTime() + travelDistance + dumpingSize.getServiceTime());
-                vehicle.setTravelTime(vehicle.getTravelTime() + travelDistance + dumpingSize.getServiceTime());
-                vehicle.setCapacity(0);
-                currentNode = dumpingSize;
-                travelDistance = data.getDistanceBetweenNode(currentNode, data.getDepotNode());
-                vehicle.setCurrentTime(vehicle.getCurrentTime() + travelDistance);
-                vehicle.setTravelTime(vehicle.getTravelTime() + travelDistance);
-            }
-        }
-
-        return basicInfo(false, data, true, "Greedy");
+        dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode);
+        currentVehicle.getRoute().add(dumpingSite);
+        currentVehicle.getRoute().add(data.getDepotNode());
+        return 0;
     }
 
-    public float ALNS(Data data) {
-        float T = 90;
-        data.destroyInfo();
+    public Data ALNSkim(Data data) {
+        data.destroyInfoKim();
         Data bestData = new Data(data);
-        float bestValue = getDataValue(bestData, false);
         Data currentData;
-        float currentValue, newValue;
+        float T = calculateInitialTemperature(data, CONSTANTS.getW()), bestValue = getDataValueKim(bestData), currentValue, newValue, delta;
         List<Node> nodesToSwap;
-        int iteration = 0;
-        String hash;
-        int score;
-        while(T > 0.1) {
-            score = 0;
-            iteration++;
+        int numberOfSteps = 0, score = 0, numberOfNodesToSwap, upperLimit;
+        String hashCode;
+        System.out.println("Best value before ALNS: " + bestValue);
+        while (numberOfSteps < 25000) {
+            System.out.println(numberOfSteps);
             currentData = new Data(data);
-            currentValue = getDataValue(currentData, false);
+            currentValue = getDataValueKim(currentData);
             nodesToSwap = new ArrayList<>();
-            destroyNodes(currentData, 2, nodesToSwap);
-            repairNodes(currentData, nodesToSwap);
-            newValue = getDataValue(currentData, false);
-            float delta = currentValue - newValue;
-            hash = currentData.dataToHash();
+            upperLimit = Math.min(100, (int) currentData.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count());
+            numberOfNodesToSwap = random.nextInt(upperLimit - 4) + 4;
+            destroyNodesKim(currentData, numberOfNodesToSwap, nodesToSwap);
+            repairVehicles(currentData);
+            repairNodesKim(currentData, nodesToSwap);
+            newValue = getDataValueKim(currentData);
+            delta = newValue - currentValue;
+            hashCode = currentData.dataToHash();
+
             if(delta > 0) {
+
                 if(newValue >= bestValue) {
-                    if(!hashes.contains(hash)) {
-                        score = 2;
-                        hashes.add(hash);
+                    if(!hashes.contains(hashCode)) {
+                        score = CONSTANTS.getSIGMA_2();
+                        hashes.add(hashCode);
                     }
                 }
+
                 data = currentData;
-            } else if (Math.exp(delta / T) > Math.random()) {
-                if(!hashes.contains(hash)) {
-                    score = 1;
-                    hashes.add(hash);
+
+            } else if (Math.exp(-1 * (delta) / T) > Math.random()) {
+
+                if(!hashes.contains(hashCode)) {
+                    score = CONSTANTS.getSIGMA_3();
+                    hashes.add(hashCode);
                 }
+
                 data = currentData;
+
             }
+
             if(newValue < bestValue) {
-                if(!hashes.contains(hash)) {
-                    score = 5;
-                    hashes.add(hash);
-                };
+
+                if(!hashes.contains(hashCode)) {
+                    score = CONSTANTS.getSIGMA_1();
+                    hashes.add(hashCode);
+                }
+
                 bestValue = newValue;
-                bestData = new Data(data);
+                bestData = new Data(currentData);
+
             }
+
             updateHeuristicInformation(heuristicWeights, score);
             //update information about performance of destroy and repair methods
-            if(iteration % 100 == 0) {
-                updateWeights(heuristicWeights, (float)0.5); //TODO: what is 'r'?
+            if(numberOfSteps % 100 == 0) {
+                updateWeights(heuristicWeights, CONSTANTS.getR());
             }
-            T *= 0.999;
+            numberOfSteps++;
+            T *= 0.995;
         }
 
-        return basicInfo(false, bestData, false, "ALNS");
+        // TODO: do something with the best found solution (bestData)
+        System.out.println("Best value after ALNS: " + bestValue);
+
+        return bestData;
+    }
+
+    private float calculateInitialTemperature(Data data, float W) {
+        float initialValue = getDataValueKim(data);
+        return (float) (-1 * (W * initialValue) / Math.log(0.5));
+    }
+
+    private void repairVehicles(Data currentData) {
+        for(Vehicle vehicle : currentData.getFleet()) {
+            List<Node> customerNodes = vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
+            if(customerNodes.size() == 0) {
+                vehicle.getRoute().clear();
+            }
+        }
     }
 
     private void updateWeights(HeuristicWeights heuristicWeights, float r) {
@@ -178,6 +190,11 @@ public class Solver {
         heuristicWeights.setRelatedRemoveWeight(newRelatedRemoveWeight);
         heuristicWeights.setGreedyInsertWeight(newGreedyInsertWeight);
         heuristicWeights.setRegretInsertWeight(newRegretInsertWeight);
+        heuristicWeights.setRandomRemoveScore(0);
+        heuristicWeights.setWorstRemoveScore(0);
+        heuristicWeights.setRelatedRemoveScore(0);
+        heuristicWeights.setGreedyInsertScore(0);
+        heuristicWeights.setRegretInsertScore(0);
     }
 
     private void updateHeuristicInformation(HeuristicWeights heuristicWeights, int score) {
@@ -211,265 +228,231 @@ public class Solver {
 
     }
 
-    private void repairNodes(Data data, List<Node> nodesToSwap) {
-        greedyInsert(data, nodesToSwap);
-        //regretInsert(data, nodesToSwap, 3);
+    private void repairNodesKim(Data data, List<Node> nodesToSwap) {
+        greedyInsertKim(data, nodesToSwap);
+
         /*
         float sumOf = heuristicWeights.sumOfRepair();
         float greedyWeight = heuristicWeights.getGreedyInsertWeight() / sumOf;
         float regretWeight = heuristicWeights.getRegretInsertWeight() / sumOf;
         double randomValue = random.nextDouble();
-
         if(randomValue < greedyWeight) {
             heuristicWeights.setCurrentInsert(1);
-            greedyInsert(data, nodesToSwap);
+            greedyInsertKim(data, nodesToSwap);
         } else if (randomValue < greedyWeight + regretWeight) {
             heuristicWeights.setCurrentRemove(2);
-            regretInsert(data, nodesToSwap);
+            regretInsertKim(data, nodesToSwap, 3);
         }
 
          */
 
     }
 
-    private void regretInsert(Data data, List<Node> nodesToSwap, int p) {
-        Vehicle vehicleToInsertInto;
+    private void regretInsertKim(Data data, List<Node> nodesToSwap, int p) {
+        List<NodeSwap> nodeSwapList;
+        float bestDiff, currentValue, diff, initialValue;
+        Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
+        int indexToInsert = 0;
+        boolean foundVehicleForInsert = false;
+        NodeSwap currentNodeSwap;
         Node nodeToInsert;
-        int indexToInsert;
         while(nodesToSwap.size() > 0) {
-            float initialValue = getDataValue(data, false);
-            List<NodeInsertion> nodeInsertionList = new ArrayList<>();
+            initialValue = getDataValueKim(data);
+            nodeSwapList = new ArrayList<>();
             for(Node nodesToInsert : nodesToSwap) {
-                float worstDiff = 0;
-                NodeInsertion nodeInsertion = new NodeInsertion(nodesToInsert);
-                for(Vehicle vehicle : data.getFleet()) {
-                    if (!vehicle.isPenaltyVehicle()) {
-                        int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
-                        for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
-                            List<Node> copiedRoute = vehicle.copyRoute();
-                            vehicle.getRoute().add(i, nodesToInsert);
-                            for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
-                                vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
+                bestDiff = Float.MAX_VALUE;
+                currentNodeSwap = new NodeSwap(nodesToInsert);
+                for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
+                    for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
+                        List<Node> copiedRoute = vehicle.copyRoute();
+                        vehicle.getRoute().add(i, nodesToInsert);
+                        boolean valid = checkForValidityKim(data, vehicle);
+                        if (valid) {
+                            currentValue = getDataValueKim(data);
+                            currentNodeSwap.getValues().add(currentValue);
+                            currentNodeSwap.getVehicleSet().add(vehicle);
+                            diff = currentValue - initialValue;
+                            if(diff < bestDiff) {
+                                bestDiff = diff;
+                                currentNodeSwap.setVehicle(vehicle);
+                                currentNodeSwap.setIndex(i);
+                                currentNodeSwap.setFoundVehicleForNodeToInsert(true);
                             }
-                            vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
-                            boolean valid = checkForValidity(data, vehicle);
-                            if (valid) {
-                                float currentValue = getDataValue(data, false);
-                                nodeInsertion.getValues().add(currentValue);
-                                nodeInsertion.getVehicleSet().add(vehicle);
-                                float diff = currentValue - initialValue;
-                                if(diff > worstDiff) {
-                                    worstDiff = diff;
-                                    nodeInsertion.setVehicle(vehicle);
-                                    nodeInsertion.setIndex(i);
-                                    nodeInsertion.setFoundVehicleForNodeToInsert(true);
-                                }
-                            }
-                            vehicle.setRoute(copiedRoute);
                         }
+                        vehicle.setRoute(copiedRoute);
                     }
                 }
-                nodeInsertionList.add(nodeInsertion);
+                nodeSwapList.add(currentNodeSwap);
             }
-            Collections.sort(nodeInsertionList, new Comparator<NodeInsertion>() {
+            nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
-                public int compare(NodeInsertion o1, NodeInsertion o2) {
+                public int compare(NodeSwap o1, NodeSwap o2) {
                     return (Float.compare(o1.getVehicleSet().size(), o2.getVehicleSet().size()));
                 }
             });
-            int leastFeasibleVehicleInsert = nodeInsertionList.get(0).getVehicleSet().size();
+            int leastFeasibleVehicleInsert = nodeSwapList.get(0).getVehicleSet().size();
 
-            NodeInsertion bestInsertion = new NodeInsertion();
+            NodeSwap bestNodeSwap = new NodeSwap();
 
             if(leastFeasibleVehicleInsert < p) {
-                List<NodeInsertion> feasibleNodeInsertions = nodeInsertionList
+                List<NodeSwap> feasibleNodeSwaps = nodeSwapList
                         .stream()
                         .filter(e -> e.getVehicleSet().size() == leastFeasibleVehicleInsert)
                         .collect(Collectors.toList());
                 float worst = 0;
-                for(NodeInsertion nodeInsertion : feasibleNodeInsertions) {
-                    Collections.sort(nodeInsertion.getValues(), new Comparator<Float>() {
+                float bestDataValue = Float.MAX_VALUE;
+                for(NodeSwap nodeSwap : feasibleNodeSwaps) {
+                    nodeSwap.getValues().sort(new Comparator<Float>() {
                         @Override
                         public int compare(Float o1, Float o2) {
                             return (Float.compare(o1, o2));
                         }
                     });
-                    float bestValue = nodeInsertion.getValues().get(0);
-                    float worstValue = nodeInsertion.getValues().get(nodeInsertion.getValues().size() - 1);
-                    float diff = worstValue - bestValue;
+                    float bestValue = nodeSwap.getValues().get(0);
+                    float worstValue = nodeSwap.getValues().get(nodeSwap.getValues().size() - 1);
+                    diff = worstValue - bestValue;
                     if(diff > worst) {
                         worst = diff;
-                        bestInsertion = nodeInsertion;
+                        bestNodeSwap = nodeSwap;
+                        bestDataValue = nodeSwap.getValue();
+                    } else if (diff == worst && nodeSwap.getValue() < bestDataValue) {
+                        worst = diff;
+                        bestNodeSwap = nodeSwap;
+                        bestDataValue = nodeSwap.getValue();
                     }
                 }
             } else {
                 float worst = 0;
-                for(NodeInsertion nodeInsertion : nodeInsertionList) {
-                    Collections.sort(nodeInsertion.getValues(), new Comparator<Float>() {
+                float bestDataValue = Float.MAX_VALUE;
+                for(NodeSwap nodeSwap : nodeSwapList) {
+                    nodeSwap.getValues().sort(new Comparator<Float>() {
                         @Override
                         public int compare(Float o1, Float o2) {
                             return (Float.compare(o1, o2));
                         }
                     });
-                    float bestValue = nodeInsertion.getValues().get(0);
-                    float worstValue = nodeInsertion.getValues().get(p - 1);
-                    float diff = worstValue - bestValue;
+                    float bestValue = nodeSwap.getValues().get(0);
+                    float worstValue = nodeSwap.getValues().get(p - 1);
+                    diff = worstValue - bestValue;
                     if(diff > worst) {
                         worst = diff;
-                        bestInsertion = nodeInsertion;
+                        bestNodeSwap = nodeSwap;
+                        bestDataValue = nodeSwap.getValue();
+                    } else if (diff == worst && nodeSwap.getValue() < bestDataValue) {
+                        worst = diff;
+                        bestNodeSwap = nodeSwap;
+                        bestDataValue = nodeSwap.getValue();
                     }
                 }
             }
 
-            vehicleToInsertInto = bestInsertion.getVehicle();
-            nodeToInsert = bestInsertion.getNode();
-            indexToInsert = bestInsertion.getIndex();
-            if(bestInsertion.isFoundVehicleForNodeToInsert()) {
+            vehicleToInsertInto = bestNodeSwap.getVehicle();
+            nodeToInsert = bestNodeSwap.getNode();
+            indexToInsert = bestNodeSwap.getIndex();
+
+            if(bestNodeSwap.isFoundVehicleForNodeToInsert()) {
                 vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
-                int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
-                for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
-                    vehicleToInsertInto.getRoute().get(j).setId(vehicleToInsertInto.getRoute().get(j).getId() + 1);
-                }
-                vehicleToInsertInto.getRoute().remove(vehicleToInsertInto.getRoute().size() - 1);
             } else {
-                Vehicle penaltyVehicle = data.getPenaltyVehicle();
                 penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
-                int firstGhostNodeIdx = penaltyVehicle.getFirstGhostNode().getId();
-                for(int j = firstGhostNodeIdx + 1; j < penaltyVehicle.getRoute().size() - 1; j++) {
-                    penaltyVehicle.getRoute().get(j).setId(penaltyVehicle.getRoute().get(j).getId() + 1);
-                }
-                penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
             }
             nodesToSwap.remove(nodeToInsert);
         }
     }
 
-    private void greedyInsert(Data data, List<Node> nodesToSwap) {
-
-        float bestDiff;
-        Vehicle vehicleToInsertInto = null;
+    private void greedyInsertKim(Data data, List<Node> nodesToSwap) {
+        List<NodeSwap> nodeSwapList;
+        float bestDiff, currentValue, diff, initialValue;
+        Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
         int indexToInsert = 0;
-        boolean foundVehicleForNodeToInsert = false;
-        List<NodeInsertion> nodeInsertionList;
-        NodeInsertion nodeInsertion;
+        boolean foundVehicleForInsert = false;
+        NodeSwap currentNodeSwap;
         Node nodeToInsert;
-        float initialValue = getDataValue(data, false);
         while(nodesToSwap.size() > 0) {
-            nodeInsertionList = new ArrayList<>();
+            nodeSwapList = new ArrayList<>();
+            initialValue = getDataValueKim(data);
             for(Node nodesToInsert : nodesToSwap) {
                 bestDiff = Float.MAX_VALUE;
-                for(Vehicle vehicle : data.getFleet()) {
-                    if (!vehicle.isPenaltyVehicle()) {
-                        int firstGhostNodeIdx = vehicle.getFirstGhostNode().getId();
-                        for (int i = 0; i < firstGhostNodeIdx + 1; i++) {
-                            List<Node> copiedRoute = vehicle.copyRoute();
-                            vehicle.getRoute().add(i, nodesToInsert);
-                            for (int j = firstGhostNodeIdx + 1; j < vehicle.getRoute().size() - 1; j++) {
-                                vehicle.getRoute().get(j).setId(vehicle.getRoute().get(j).getId() + 1);
+                for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 0 && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
+                    for(int i = 1; i < vehicle.getRoute().size() - 1; i++) {
+                        List<Node> copiedRoute = vehicle.copyRoute();
+                        vehicle.getRoute().add(i, nodesToInsert);
+                        boolean validSolution = checkForValidityKim(data, vehicle);
+                        if(validSolution) {
+                            currentValue = getDataValueKim(data);
+                            diff = currentValue - initialValue;
+                            if(diff < bestDiff) {
+                                bestDiff = diff;
+                                vehicleToInsertInto = vehicle;
+                                indexToInsert = i;
+                                foundVehicleForInsert = true;
                             }
-                            vehicle.getRoute().remove(vehicle.getRoute().size() - 1);
-                            boolean valid = checkForValidity(data, vehicle);
-                            if (valid) {
-                                float currentValue = getDataValue(data, false);
-                                float diff = currentValue - initialValue;
-                                if (diff <= bestDiff) {
-                                    bestDiff = diff;
-                                    vehicleToInsertInto = vehicle;
-                                    indexToInsert = i;
-                                    foundVehicleForNodeToInsert = true;
-                                }
-                            }
-                            vehicle.setRoute(copiedRoute);
                         }
+                        vehicle.setRoute(copiedRoute);
                     }
                 }
-                nodeInsertion = new NodeInsertion(nodesToInsert, vehicleToInsertInto, bestDiff, indexToInsert, foundVehicleForNodeToInsert);
-                nodeInsertionList.add(nodeInsertion);
+                currentNodeSwap = new NodeSwap(nodesToInsert, vehicleToInsertInto, bestDiff, indexToInsert, foundVehicleForInsert);
+                nodeSwapList.add(currentNodeSwap);
             }
-
-            Collections.sort(nodeInsertionList, new Comparator<NodeInsertion>() {
+            nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
-                public int compare(NodeInsertion o1, NodeInsertion o2) {
+                public int compare(NodeSwap o1, NodeSwap o2) {
                     return (Float.compare(o1.getValue(), o2.getValue()));
                 }
             });
 
-            NodeInsertion bestInsertion = nodeInsertionList.get(0);
-            vehicleToInsertInto = bestInsertion.getVehicle();
-            nodeToInsert = bestInsertion.getNode();
-            indexToInsert = bestInsertion.getIndex();
-            nodeInsertionList.remove(0);
-            if(bestInsertion.isFoundVehicleForNodeToInsert()) {
+            NodeSwap bestNodeSwap = nodeSwapList.get(0);
+            vehicleToInsertInto = bestNodeSwap.getVehicle();
+            nodeToInsert = bestNodeSwap.getNode();
+            indexToInsert = bestNodeSwap.getIndex();
+
+            if(bestNodeSwap.isFoundVehicleForNodeToInsert()) {
                 vehicleToInsertInto.getRoute().add(indexToInsert, nodeToInsert);
-                int firstGhostNodeIdx = vehicleToInsertInto.getFirstGhostNode().getId();
-                for(int j = firstGhostNodeIdx + 1; j < vehicleToInsertInto.getRoute().size() - 1; j++) {
-                    vehicleToInsertInto.getRoute().get(j).setId(vehicleToInsertInto.getRoute().get(j).getId() + 1);
-                }
-                vehicleToInsertInto.getRoute().remove(vehicleToInsertInto.getRoute().size() - 1);
             } else {
-                Vehicle penaltyVehicle = data.getPenaltyVehicle();
                 penaltyVehicle.getRoute().add(indexToInsert, nodeToInsert);
-                int firstGhostNodeIdx = penaltyVehicle.getFirstGhostNode().getId();
-                for(int j = firstGhostNodeIdx + 1; j < penaltyVehicle.getRoute().size() - 1; j++) {
-                    penaltyVehicle.getRoute().get(j).setId(penaltyVehicle.getRoute().get(j).getId() + 1);
-                }
-                penaltyVehicle.getRoute().remove(penaltyVehicle.getRoute().size() - 1);
             }
             nodesToSwap.remove(nodeToInsert);
         }
-
     }
 
-    private boolean checkForValidity(Data data, Vehicle vehicle) {
+    private boolean checkForValidityKim(Data data, Vehicle vehicle) {
         List<Node> route = vehicle.getRoute();
-        if(route.get(0).isGhostNode()) {
-            return true;
-        }
-        int currentIdx = 0;
-        float travelDistance;
-        Node currentNode = route.get(currentIdx);
-        float currentTime = currentNode.getTimeStart();
-        vehicle.setCapacity(0);
-        Node dumpingSite;
-        while (!currentNode.isGhostNode()) {
-            Node nextNode = route.get(currentIdx + 1);
-            if(!nextNode.isGhostNode()) {
-                if(vehicle.getCapacity() + nextNode.getQuantity() <= vehicle.getMaximumCapacity()) {
-                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    if(!data.timeWindowCheckWithWaitingTime(currentNode, nextNode, currentTime, travelDistance)) {
-                        return false;
-                    }
-                    vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
-                    currentTime = Math.max(currentTime + currentNode.getServiceTime() + travelDistance, nextNode.getTimeStart());
-                    currentNode = nextNode;
-                } else {
-                    dumpingSite = data.getNearestDumpingSiteNode(currentNode);
-                    travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSite);
-                    vehicle.setCapacity(0);
-                    currentTime += travelDistance + dumpingSite.getServiceTime();
-                    currentNode = dumpingSite;
 
-                    nextNode = route.get(currentIdx + 1);
-                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    if(!data.timeWindowCheckWithWaitingTime(currentNode, nextNode, currentTime, travelDistance)) {
-                        return false;
-                    }
-                    vehicle.setCapacity(vehicle.getCapacity() + Math.round(nextNode.getQuantity()));
-                    currentTime = Math.max(currentTime + currentNode.getServiceTime() + travelDistance, nextNode.getTimeStart());
-                    currentNode = nextNode;
-                }
-                currentIdx++;
-            } else {
-                break;
+        if(route.size() > vehicle.getMaximumNumberOfStopsToVisit()) {
+            return false;
+        }
+
+        Node currentNode = route.get(0), previousNode;
+        float currentTime = currentNode.getTimeStart(), quantity;
+        vehicle.setCapacity((float)0);
+        previousNode = currentNode;
+        for(int i = 1; i < route.size(); i++) {
+            currentNode = route.get(i);
+            if(currentNode.isDumpingSite()) {
+                vehicle.setCapacity((float)0);
+            } else if(!currentNode.isDepot()) {
+                quantity = currentNode.getQuantity();
+                vehicle.setCapacity(vehicle.getCapacity() + quantity);
             }
+
+            if(vehicle.getCapacity() > vehicle.getMaximumCapacity()) {
+                return false;
+            }
+
+            float serviceTimeAtPreviousNode = previousNode.getServiceTime();
+            float travelDistance = data.getDistanceBetweenNode(previousNode, currentNode);
+
+            if(!data.timeWindowCheck(currentTime + serviceTimeAtPreviousNode + travelDistance, currentNode)) {
+                return false;
+            }
+            currentTime = Math.max(currentTime + previousNode.getServiceTime() + travelDistance, currentNode.getTimeStart());
+            vehicle.setCurrentTime(currentTime);
+            previousNode = currentNode;
         }
         return true;
     }
 
-    private void destroyNodes(Data data, int p, List<Node> nodesToSwap) {
-        worstRemove(data, p, nodesToSwap);
-        //relatedRemove(data, p, nodesToSwap, (float)0.3, (float)0.3, (float)0.3);
-        /*
+    private void destroyNodesKim(Data data, int p, List<Node> nodesToSwap) {
+
         float sumOf = heuristicWeights.sumOfDestroy();
         float worstWeight = heuristicWeights.getWorstRemoveWeight() / sumOf;
         float randomWeight = heuristicWeights.getRandomRemoveWeight() / sumOf;
@@ -478,152 +461,127 @@ public class Solver {
 
         if(randomValue < worstWeight) {
             heuristicWeights.setCurrentRemove(1);
-            worstRemove(data, p, nodesToSwap);
+            worstRemovalKim(data, p, nodesToSwap, CONSTANTS.getP_WORST());
         } else if(randomValue < worstWeight + randomWeight) {
             heuristicWeights.setCurrentRemove(2);
-            randomRemoval(data, p, nodesToSwap);
+            randomRemovalKim(data, p, nodesToSwap);
         } else if(randomValue < worstWeight + randomWeight + relatedWeight){
             heuristicWeights.setCurrentRemove(3);
-            relatedRemove(data, p, nodesToSwap);
+            relatedRemovalKim(data, p, nodesToSwap, CONSTANTS.getPHI(), CONSTANTS.getCHI(), CONSTANTS.getPSI(), CONSTANTS.getP());
         }
-
-         */
 
     }
 
-    private void relatedRemove(Data data, int p, List<Node> nodesToSwap,
-                               float phi, float chi, float psi) {
-        randomRemoval(data, 1, nodesToSwap);
+
+    private void relatedRemovalKim(Data data, int p, List<Node> nodesToSwap,
+                                   float phi, float chi, float psi, int P) {
+        randomRemovalKim(data, 1, nodesToSwap);
+        int randomIndex;
+        List<NodeSwap> nodeSwapList;
+        NodeSwap bestNodeSwap, currentNodeSwap;
         while(nodesToSwap.size() < p) {
-            int idx = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
-            Node nodeToCompare = nodesToSwap.get(idx);
-            List<Float> relatednessValues = new ArrayList<>();
-            float bestRelatedness = Float.MAX_VALUE;
-            Node nodeToRemove = null;
-            Vehicle vehicleToRemoveFrom = null;
-            for(Vehicle vehicle : data.getFleet()) {
-                for(Node node : vehicle.getRoute()) {
-                    if(!node.isGhostNode()) {
-                        float relatedness = phi * data.getDistanceBetweenNode(nodeToCompare, node)
-                                //+ chi * Math.abs(data.getTimeNodeVisitedAt(nodeToCompare) - data.getTimeNodeVisitedAt(node))
-                                + psi * Math.abs(nodeToCompare.getQuantity() - node.getQuantity());
-                        if(relatedness < bestRelatedness) {
-                            bestRelatedness = relatedness;
-                            nodeToRemove = node;
-                            vehicleToRemoveFrom = vehicle;
-                        }
-                    }
+            nodeSwapList = new ArrayList<>();
+            randomIndex = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
+            Node nodeToCompare = nodesToSwap.get(randomIndex);
+            data.calculateVisitingTime();
+            for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 0).collect(Collectors.toList())) {
+                for(Node node : vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList())) {
+                    currentNodeSwap = new NodeSwap();
+                    float relatedness = phi * data.getDistanceBetweenNode(nodeToCompare, node)
+                            + chi * Math.abs(nodeToCompare.getVisitedAt() - node.getVisitedAt())
+                            + psi * Math.abs(nodeToCompare.getQuantity() - node.getQuantity());
+                    currentNodeSwap.setNode(node);
+                    currentNodeSwap.setValue(relatedness);
+                    currentNodeSwap.setVehicle(vehicle);
+
+                    nodeSwapList.add(currentNodeSwap);
                 }
             }
-            vehicleToRemoveFrom.removeNode(nodeToRemove);
-            nodesToSwap.add(nodeToRemove);
+
+            nodeSwapList.sort(new Comparator<NodeSwap>() {
+                @Override
+                public int compare(NodeSwap o1, NodeSwap o2) {
+                    return (Float.compare(o1.getValue(), o2.getValue()));
+                }
+            });
+
+            double y = random.nextDouble();
+            int index = (int)(Math.pow(y, P) * nodeSwapList.size());
+
+            bestNodeSwap = nodeSwapList.get(index);
+            nodesToSwap.add(bestNodeSwap.getNode());
+            bestNodeSwap.getVehicle().getRoute().remove(bestNodeSwap.getNode());
         }
     }
 
-    private void randomRemoval(Data data, int p, List<Node> nodesToSwap) {
-        int nodeIdMax = data.getNodeListSize() - 1;
-        List<Integer> dumpingSites = data.getDumpingSites();
-        Set<Integer> indexesToRemove = new HashSet<>();
-        while (indexesToRemove.size() < p) {
-            int next = random.nextInt(nodeIdMax) + 1;
-            if(!dumpingSites.contains(next)) {
-                indexesToRemove.add(next);
-            }
-        }
-        for(Vehicle vehicle : data.getFleet()) {
-            for(int i = 0; i < vehicle.getRoute().size(); i++) {
-                Node node = vehicle.getRoute().get(i);
-                if(!node.isGhostNode() && indexesToRemove.contains(node.getId())) {
-                    nodesToSwap.add(node);
-                    vehicle.removeNode(node);
-                    i--;
-                }
-            }
-        }
-    }
-
-    private void worstRemove(Data data, int p, List<Node> nodesToSwap) {
-        float bestValue = getDataValue(data, false);
-        int removed = 0;
-        //Data data = new Data(data);
-        Node nodeToRemove = null;
-        while (removed < p) {
+    private void randomRemovalKim(Data data, int p, List<Node> nodesToSwap) {
+        List<Node> feasibleNodesToRemove;
+        int numberOfFeasibleNodesToRemove, index;
+        while (nodesToSwap.size() < p) {
+            feasibleNodesToRemove = data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
+            numberOfFeasibleNodesToRemove = feasibleNodesToRemove.size();
+            index = random.nextInt(numberOfFeasibleNodesToRemove);
+            Node nodeToRemove = feasibleNodesToRemove.get(index);
             for(Vehicle vehicle : data.getFleet()) {
                 for(int i = 0; i < vehicle.getRoute().size(); i++) {
                     Node node = vehicle.getRoute().get(i);
-                    if(!node.getGhostNode()) {
+                    if(node.getId() == nodeToRemove.getId()) {
+                        nodesToSwap.add(node);
+                        vehicle.getRoute().remove(node);
+                    }
+                }
+            }
+        }
+    }
+
+    private void worstRemovalKim(Data data, int p, List<Node> nodesToSwap, int p_worst) {
+        float currentValue;
+        NodeSwap bestNodeSwap;
+        List<NodeSwap> nodeSwapList;
+        while (nodesToSwap.size() < p) {
+            nodeSwapList = new ArrayList<>();
+            for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 0).collect(Collectors.toList())) {
+                for(int i = 0; i < vehicle.getRoute().size(); i++) {
+                    Node node = vehicle.getRoute().get(i);
+                    NodeSwap currentNodeSwap = new NodeSwap();
+                    if(!node.isDepot() && !node.isDumpingSite()) {
                         List<Node> copiedRoute = vehicle.copyRoute();
-                        vehicle.removeNode(node);
-                        float currentValue = getDataValue(data, false);
-                        if(currentValue < bestValue) {
-                            bestValue = currentValue;
-                            nodeToRemove = node;
-                        }
+                        vehicle.getRoute().remove(node);
+                        currentValue = getDataValueKim(data);
+
+                        currentNodeSwap.setNode(node);
+                        currentNodeSwap.setValue(currentValue);
+                        currentNodeSwap.setIndex(i);
+                        currentNodeSwap.setVehicle(vehicle);
+
+                        nodeSwapList.add(currentNodeSwap);
+
                         vehicle.setRoute(copiedRoute);
-                    } else {
-                        break;
                     }
                 }
             }
-            nodesToSwap.add(nodeToRemove);
-            removed++;
-            for(Node node : nodesToSwap) {
-                for(Vehicle vehicle : data.getFleet()) {
-                    for(Node routeNode : vehicle.getRoute()) {
-                        if(!routeNode.getGhostNode()) {
-                            if (node.getId() == routeNode.getId()) {
-                                vehicle.removeNode(routeNode);
-                            }
-                        } else {
-                            break;
-                        }
-                    }
+            nodeSwapList.sort(new Comparator<NodeSwap>() {
+                @Override
+                public int compare(NodeSwap o1, NodeSwap o2) {
+                    return (Float.compare(o1.getValue(), o2.getValue()));
                 }
-            }
+            });
+
+            double y = random.nextDouble();
+            int index = (int)(Math.pow(y, p_worst) * nodeSwapList.size());
+
+            bestNodeSwap = nodeSwapList.get(index);
+            bestNodeSwap.getVehicle().getRoute().remove(bestNodeSwap.getIndex());
+            nodesToSwap.add(bestNodeSwap.getNode());
         }
     }
 
-    private boolean checkSolution(Data data) {
-        for(Node node : data.getNodeList()) {
-            if(data.customerNode(node) && (!node.isVisited() || !data.timeWindowCheck(node.getVisitedAt(), node))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private float getDataValue(Data data, boolean timeWindow) {
+    private float getDataValueKim(Data data) {
         float overallDistance = 0;
         for(Vehicle vehicle : data.getFleet()) {
-            float distance = vehicle.calculateTravelDistance(data, timeWindow);
+            float distance = vehicle.calculateTravelDistanceKim(data);
             overallDistance += distance;
         }
         return overallDistance;
-    }
-
-    private float basicInfo(boolean print, Data bestData, boolean timeWindow, String name){
-        if(print) {
-            System.out.println("---------------------");
-            System.out.println(name);
-            for(Vehicle vehicle : bestData.getFleet()) {
-                if(!vehicle.getRoute().get(0).isGhostNode()) {
-                    System.out.print("Vehicle " + vehicle.getId() + ": ");
-                    for(Node node : vehicle.getRoute()) {
-                        if(!node.isGhostNode()) {
-                            System.out.print(node.getId() + " ");
-                        }
-                    }
-                    System.out.println(", distance: " + vehicle.calculateTravelDistance(bestData, timeWindow));
-                    System.out.print(", valid: " + checkForValidity(bestData, vehicle));
-                    System.out.println();
-                }
-            }
-            float value = getDataValue(bestData, timeWindow);
-            System.out.println();
-            System.out.println("Total distance: " + value);
-            System.out.println("---------------------");
-            return value;
-        }
-        return getDataValue(bestData, timeWindow);
     }
 }
