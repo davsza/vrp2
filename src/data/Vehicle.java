@@ -2,6 +2,7 @@ package data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Vehicle {
 
@@ -158,83 +159,17 @@ public class Vehicle {
         return null;
     }
 
-    public Float calculateTravelDistance(Data data, boolean timeWindow) {
-        if(route.get(0).isGhostNode()) {
-            return (float)0;
-        }
-        if(isPenaltyVehicle()) {
-            return (float)500;
-        }
-        int currentIdx = 0;
-        float travelDistance;
-        Node currentNode = route.get(currentIdx);
-        Node dumpingSite;
-        setCapacity(currentNode.getQuantity());
-        float distance = data.getDistanceBetweenNode(data.getDepotNode(), currentNode);
-        while(!currentNode.isGhostNode()) {
-            Node nextNode = route.get(currentIdx + 1);
-            if(!nextNode.isGhostNode()) {
-                float visitedAt = currentNode.getVisitedAt();
-                float serviceTime = currentNode.getServiceTime();
-                float travelTime = data.getDistanceBetweenNode(currentNode, nextNode);
-                if(getCapacity() + nextNode.getQuantity() <= getMaximumCapacity()
-                        && (timeWindow ? data.timeWindowCheck(visitedAt + serviceTime + travelTime, nextNode) : true)) {
-                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    distance += travelDistance;
-                    setCapacity(getCapacity() + Math.round(nextNode.getQuantity()));
-                    currentNode = nextNode;
-                } else {
-                    dumpingSite = data.getNearestDumpingSiteNode(currentNode);
-                    travelDistance = data.getDistanceBetweenNode(currentNode, dumpingSite);
-                    distance += travelDistance;
-                    setCapacity((float)0);
-                    currentNode = dumpingSite;
-
-                    nextNode = route.get(currentIdx + 1);
-                    travelDistance = data.getDistanceBetweenNode(currentNode, nextNode);
-                    distance += travelDistance;
-                    setCapacity(getCapacity() + Math.round(nextNode.getQuantity()));
-                    currentNode = nextNode;
-                }
-                currentIdx++;
-            } else {
-                dumpingSite = data.getNearestDumpingSiteNode(currentNode);
-                distance += data.getDistanceBetweenNode(currentNode, dumpingSite);
-                distance += data.getDistanceBetweenNode(dumpingSite, data.getDepotNode());
-                currentNode = nextNode;
-            }
-        }
-        return distance;
-    }
-
     public float calculateTravelDistanceKim(Data data) {
-        if(route.size() < 1) return 0;
+        int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
+        if(customerNodeListSize == 0) {
+            return 0;
+        }
         float travelDistance = 0;
         for(int i = 1; i < route.size(); i++) {
             float travelDistanceBetweenNodes = data.getDistanceBetweenNode(route.get(i - 1), route.get(i));
             travelDistance += travelDistanceBetweenNodes;
         }
         return travelDistance;
-    }
-
-    public void removeNode(Node nodeToRemove) {
-        for(Node node : route) {
-            if(node.equals(nodeToRemove)) {
-                int currentIdx = route.indexOf(node);
-                int firstGhostNodeIdx = route.indexOf(getFirstGhostNode());
-                for(int i = currentIdx + 1; i < firstGhostNodeIdx; i++) {
-                    route.set(i - 1, route.get(i));
-                }
-                route.set(firstGhostNodeIdx - 1, createGhostNode(firstGhostNodeIdx - 1));
-            }
-        }
-    }
-
-    private Node createGhostNode(int idx) {
-        Node node = new Node();
-        node.setGhostNode(true);
-        node.setId(idx);
-        return node;
     }
 
     public List<Node> copyRoute() {

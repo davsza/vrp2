@@ -118,12 +118,7 @@ public class Data {
     }
 
     public boolean hasMoreUnvisitedNodes() {
-        for(Node node : nodeList) {
-            if(customerNodeAndNotVisitedYet(node)) {
-                return true;
-            }
-        }
-        return false;
+        return nodeList.stream().anyMatch(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited());
     }
 
     public Node getDepotNode() {
@@ -149,6 +144,7 @@ public class Data {
         return nextNode;
     }
 
+    // TODO: fix needed
     private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode) {
         Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode);
         float travelDistanceFromCurrentNodeToDumpingSite = getDistanceBetweenNode(currentNode, dumpingSite);
@@ -164,66 +160,8 @@ public class Data {
         return currentVehicle.getRoute().size() < currentVehicle.getMaximumNumberOfStopsToVisit();
     }
 
-    public Node findNextNode(Vehicle vehicle, Node currentNode) {
-        // we are currently in a depot, so route is starting now
-        if(currentNode.isDepot()) {
-            int startingTime = Integer.MAX_VALUE;
-            Node nextNode = null;
-            // find the node which time windows starts the earliest, also the distance if there are multiple
-            for(Node node : nodeList) {
-                if(node.getTimeStart() < startingTime && customerNodeAndNotVisitedYet(node)) {
-                    nextNode = node;
-                    startingTime = node.getTimeStart();
-                }
-            }
-            assert nextNode != null;
-            // set the vehicle's current time that it's the starting time of the node upon arrival
-            vehicle.setCurrentTime((float)nextNode.getTimeStart());
-            return nextNode;
-        } else {
-            float distance = Float.MAX_VALUE;
-            float currentTime = vehicle.getCurrentTime();
-            Node nextNode = new Node();
-            // set the node to a so-called null node, so when the algorithm doesn't find a feasible node, we can
-            // notify the solver
-            nextNode.setNullNode(true);
-            // find the next node for the route of the vehicle, where:
-            // - the node is not visited yet, and it's not a depot or dumping site
-            // - the travel time will not exceed the maximum travel time of the vehicle
-            // - the vehicle arrives to the node between the time window of the given node
-            // - the distance between the current node and the next node is the shortest
-            for(Node node : nodeList) {
-                float travelDistance = getDistanceBetweenNode(currentNode, node);
-                if(customerNodeAndNotVisitedYet(node)
-                        && capacityCheck(vehicle, node)
-                        && timeWindowCheck(currentTime + travelDistance, node)
-                        && travelDistance < distance) {
-                    // if a feasible node is found, set it
-                    distance = travelDistance;
-                    nextNode = node;
-                }
-            }
-            return nextNode;
-        }
-    }
-
     private boolean capacityCheck(Vehicle vehicle, Node node) {
         return vehicle.getCapacity() + node.getQuantity() <= vehicle.getMaximumCapacity();
-    }
-
-    public Node getNearestDumpingSiteNode(Node nextNode) {
-        float bestDistance = Float.MAX_VALUE;
-        Node nearestDumpingSite = null;
-        for(Node node : nodeList) {
-            if(node.isDumpingSite()) {
-                float distance = getDistanceBetweenNode(nextNode, node);
-                if(distance < bestDistance) {
-                    bestDistance = distance;
-                    nearestDumpingSite = node;
-                }
-            }
-        }
-        return nearestDumpingSite;
     }
 
     public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode) {

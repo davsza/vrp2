@@ -85,6 +85,13 @@ public class Solver {
         dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode);
         currentVehicle.getRoute().add(dumpingSite);
         currentVehicle.getRoute().add(data.getDepotNode());
+
+        for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() == 0).collect(Collectors.toList())) {
+            vehicle.getRoute().add(data.getDepotNode());
+            vehicle.getRoute().add(data.getNearestDumpingSiteNode(vehicle, data.getDepotNode()));
+            vehicle.getRoute().add(data.getDepotNode());
+        }
+
         return 0;
     }
 
@@ -94,7 +101,7 @@ public class Solver {
         Data currentData;
         float T = calculateInitialTemperature(data, CONSTANTS.getW()), bestValue = getDataValueKim(bestData), currentValue, newValue, delta;
         List<Node> nodesToSwap;
-        int numberOfSteps = 0, score = 0, numberOfNodesToSwap, upperLimit;
+        int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit;
         String hashCode;
         System.out.println("Best value before ALNS: " + bestValue);
         while (numberOfSteps < 25000) {
@@ -104,14 +111,26 @@ public class Solver {
             nodesToSwap = new ArrayList<>();
             upperLimit = Math.min(100, (int) currentData.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count());
             numberOfNodesToSwap = random.nextInt(upperLimit - 4) + 4;
+            System.out.println(numberOfNodesToSwap);
+            long asd = System.currentTimeMillis();
+            System.out.println("torles kezdodott");
             destroyNodesKim(currentData, numberOfNodesToSwap, nodesToSwap);
-            repairVehicles(currentData);
+            System.out.println("torles vege");
+
+            long asd2 = System.currentTimeMillis();
+            System.out.println("repair kezdodott");
+
             repairNodesKim(currentData, nodesToSwap);
+            System.out.println("repair vege");
+
+            long asd3 = System.currentTimeMillis();
+            System.out.println("destry: " + (asd2-asd));
+            System.out.println("repair: " + (asd3-asd2));
             newValue = getDataValueKim(currentData);
             delta = newValue - currentValue;
             hashCode = currentData.dataToHash();
 
-            if(delta > 0) {
+            if(delta < 0) {
 
                 if(newValue >= bestValue) {
                     if(!hashes.contains(hashCode)) {
@@ -165,15 +184,6 @@ public class Solver {
         return (float) (-1 * (W * initialValue) / Math.log(0.5));
     }
 
-    private void repairVehicles(Data currentData) {
-        for(Vehicle vehicle : currentData.getFleet()) {
-            List<Node> customerNodes = vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
-            if(customerNodes.size() == 0) {
-                vehicle.getRoute().clear();
-            }
-        }
-    }
-
     private void updateWeights(HeuristicWeights heuristicWeights, float r) {
         float newRandomRemoveWeight = heuristicWeights.getRandomRemoveWeight() * (1 - r)
                 + r * (heuristicWeights.getRandomRemoveScore() / (float)heuristicWeights.getTimesUsedRandomRemove());
@@ -203,14 +213,17 @@ public class Solver {
 
         switch (destroyHeuristic){
             case 1:
-                heuristicWeights.setRandomRemoveScore(heuristicWeights.getRandomRemoveScore() + score);
-                heuristicWeights.setTimesUsedRandomRemove(heuristicWeights.getTimesUsedRandomRemove() + 1);
-            case 2:
                 heuristicWeights.setWorstRemoveScore(heuristicWeights.getWorstRemoveScore() + score);
                 heuristicWeights.setTimesUsedWorstRemove(heuristicWeights.getTimesUsedWorstRemove() + 1);
+                break;
+            case 2:
+                heuristicWeights.setRandomRemoveScore(heuristicWeights.getRandomRemoveScore() + score);
+                heuristicWeights.setTimesUsedRandomRemove(heuristicWeights.getTimesUsedRandomRemove() + 1);
+                break;
             case 3:
                 heuristicWeights.setRelatedRemoveScore(heuristicWeights.getRelatedRemoveScore() + score);
                 heuristicWeights.setTimesUsedRelatedRemove(heuristicWeights.getTimesUsedRelatedRemove() + 1);
+                break;
             default:
                 break;
         }
@@ -229,9 +242,8 @@ public class Solver {
     }
 
     private void repairNodesKim(Data data, List<Node> nodesToSwap) {
-        greedyInsertKim(data, nodesToSwap);
+        // TODO: regret 2,3,k different
 
-        /*
         float sumOf = heuristicWeights.sumOfRepair();
         float greedyWeight = heuristicWeights.getGreedyInsertWeight() / sumOf;
         float regretWeight = heuristicWeights.getRegretInsertWeight() / sumOf;
@@ -240,11 +252,9 @@ public class Solver {
             heuristicWeights.setCurrentInsert(1);
             greedyInsertKim(data, nodesToSwap);
         } else if (randomValue < greedyWeight + regretWeight) {
-            heuristicWeights.setCurrentRemove(2);
+            heuristicWeights.setCurrentInsert(2);
             regretInsertKim(data, nodesToSwap, 3);
         }
-
-         */
 
     }
 
@@ -315,7 +325,7 @@ public class Solver {
                         worst = diff;
                         bestNodeSwap = nodeSwap;
                         bestDataValue = nodeSwap.getValue();
-                    } else if (diff == worst && nodeSwap.getValue() < bestDataValue) {
+                    } else if (diff == worst &&  nodeSwap.getValues().get(0) < bestDataValue) {
                         worst = diff;
                         bestNodeSwap = nodeSwap;
                         bestDataValue = nodeSwap.getValue();
@@ -423,6 +433,7 @@ public class Solver {
 
         Node currentNode = route.get(0), previousNode;
         float currentTime = currentNode.getTimeStart(), quantity;
+        vehicle.setCurrentTime(currentTime);
         vehicle.setCapacity((float)0);
         previousNode = currentNode;
         for(int i = 1; i < route.size(); i++) {
@@ -452,6 +463,8 @@ public class Solver {
     }
 
     private void destroyNodesKim(Data data, int p, List<Node> nodesToSwap) {
+
+        // TODO: check removal method runtimes
 
         float sumOf = heuristicWeights.sumOfDestroy();
         float worstWeight = heuristicWeights.getWorstRemoveWeight() / sumOf;
@@ -484,6 +497,7 @@ public class Solver {
             randomIndex = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
             Node nodeToCompare = nodesToSwap.get(randomIndex);
             data.calculateVisitingTime();
+            // TODO:
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 0).collect(Collectors.toList())) {
                 for(Node node : vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList())) {
                     currentNodeSwap = new NodeSwap();
@@ -517,19 +531,24 @@ public class Solver {
     private void randomRemovalKim(Data data, int p, List<Node> nodesToSwap) {
         List<Node> feasibleNodesToRemove;
         int numberOfFeasibleNodesToRemove, index;
+        boolean found = false;
         while (nodesToSwap.size() < p) {
             feasibleNodesToRemove = data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
             numberOfFeasibleNodesToRemove = feasibleNodesToRemove.size();
             index = random.nextInt(numberOfFeasibleNodesToRemove);
             Node nodeToRemove = feasibleNodesToRemove.get(index);
             for(Vehicle vehicle : data.getFleet()) {
+                found = false;
                 for(int i = 0; i < vehicle.getRoute().size(); i++) {
                     Node node = vehicle.getRoute().get(i);
                     if(node.getId() == nodeToRemove.getId()) {
                         nodesToSwap.add(node);
                         vehicle.getRoute().remove(node);
+                        found = true;
+                        break;
                     }
                 }
+                if(found) break;
             }
         }
     }
@@ -540,6 +559,7 @@ public class Solver {
         List<NodeSwap> nodeSwapList;
         while (nodesToSwap.size() < p) {
             nodeSwapList = new ArrayList<>();
+            // TODO: hüyleésg a szűrés
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 0).collect(Collectors.toList())) {
                 for(int i = 0; i < vehicle.getRoute().size(); i++) {
                     Node node = vehicle.getRoute().get(i);
