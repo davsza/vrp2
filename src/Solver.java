@@ -111,21 +111,8 @@ public class Solver {
             nodesToSwap = new ArrayList<>();
             upperLimit = Math.min(100, (int) currentData.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count());
             numberOfNodesToSwap = random.nextInt(upperLimit - 4) + 4;
-            System.out.println(numberOfNodesToSwap);
-            long asd = System.currentTimeMillis();
-            System.out.println("torles kezdodott");
             destroyNodesKim(currentData, numberOfNodesToSwap, nodesToSwap);
-            System.out.println("torles vege");
-
-            long asd2 = System.currentTimeMillis();
-            System.out.println("repair kezdodott");
-
             repairNodesKim(currentData, nodesToSwap);
-            System.out.println("repair vege");
-
-            long asd3 = System.currentTimeMillis();
-            System.out.println("destry: " + (asd2-asd));
-            System.out.println("repair: " + (asd3-asd2));
             newValue = getDataValueKim(currentData);
             delta = newValue - currentValue;
             hashCode = currentData.dataToHash();
@@ -193,18 +180,26 @@ public class Solver {
                 + r * (heuristicWeights.getRelatedRemoveScore() / (float)heuristicWeights.getTimesUsedRelatedRemove());
         float newGreedyInsertWeight = heuristicWeights.getGreedyInsertWeight() * (1 - r)
                 + r * (heuristicWeights.getGreedyInsertScore() / (float)heuristicWeights.getTimesUsedGreedyInsert());
-        float newRegretInsertWeight = heuristicWeights.getRegretInsertWeight() * (1 - r)
-                + r * (heuristicWeights.getRegretInsertScore() / (float)heuristicWeights.getTimesUsedRegretInsert());
+        float newRegret_2_InsertWeight = heuristicWeights.getRegret_2_InsertWeight() * (1 - r)
+                + r * (heuristicWeights.getRegret_2_InsertScore() / (float)heuristicWeights.getTimesUsedRegret_2_Insert());
+        float newRegret_3_InsertWeight = heuristicWeights.getRegret_3_InsertWeight() * (1 - r)
+                + r * (heuristicWeights.getRegret_3_InsertScore() / (float)heuristicWeights.getTimesUsedRegret_3_Insert());
+        float newRegret_K_InsertWeight = heuristicWeights.getRegret_K_InsertWeight() * (1 - r)
+                + r * (heuristicWeights.getRegret_K_InsertScore() / (float)heuristicWeights.getTimesUsedRegret_K_Insert());
         heuristicWeights.setRandomRemoveWeight(newRandomRemoveWeight);
         heuristicWeights.setWorstRemoveWeight(newWorstRemoveWeight);
         heuristicWeights.setRelatedRemoveWeight(newRelatedRemoveWeight);
         heuristicWeights.setGreedyInsertWeight(newGreedyInsertWeight);
-        heuristicWeights.setRegretInsertWeight(newRegretInsertWeight);
+        heuristicWeights.setRegret_2_InsertWeight(newRegret_2_InsertWeight);
+        heuristicWeights.setRegret_3_InsertWeight(newRegret_3_InsertWeight);
+        heuristicWeights.setRegret_K_InsertWeight(newRegret_K_InsertWeight);
         heuristicWeights.setRandomRemoveScore(0);
         heuristicWeights.setWorstRemoveScore(0);
         heuristicWeights.setRelatedRemoveScore(0);
         heuristicWeights.setGreedyInsertScore(0);
-        heuristicWeights.setRegretInsertScore(0);
+        heuristicWeights.setRegret_2_InsertScore(0);
+        heuristicWeights.setRegret_3_InsertScore(0);
+        heuristicWeights.setRegret_K_InsertScore(0);
     }
 
     private void updateHeuristicInformation(HeuristicWeights heuristicWeights, int score) {
@@ -233,8 +228,14 @@ public class Solver {
                 heuristicWeights.setGreedyInsertScore(heuristicWeights.getGreedyInsertScore() + score);
                 heuristicWeights.setTimesUsedGreedyInsert(heuristicWeights.getTimesUsedGreedyInsert() + 1);
             case 2:
-                heuristicWeights.setRegretInsertScore(heuristicWeights.getRegretInsertScore() + score);
-                heuristicWeights.setTimesUsedRegretInsert(heuristicWeights.getTimesUsedRegretInsert() + 1);
+                heuristicWeights.setRegret_2_InsertScore(heuristicWeights.getRegret_2_InsertScore() + score);
+                heuristicWeights.setTimesUsedRegret_2_Insert(heuristicWeights.getTimesUsedRegret_2_Insert() + 1);
+            case 3:
+                heuristicWeights.setRegret_3_InsertScore(heuristicWeights.getRegret_3_InsertScore() + score);
+                heuristicWeights.setTimesUsedRegret_3_Insert(heuristicWeights.getTimesUsedRegret_3_Insert() + 1);
+            case 4:
+                heuristicWeights.setRegret_K_InsertScore(heuristicWeights.getRegret_K_InsertScore() + score);
+                heuristicWeights.setTimesUsedRegret_K_Insert(heuristicWeights.getTimesUsedRegret_K_Insert() + 1);
             default:
                 break;
         }
@@ -242,18 +243,26 @@ public class Solver {
     }
 
     private void repairNodesKim(Data data, List<Node> nodesToSwap) {
-        // TODO: regret 2,3,k different
 
         float sumOf = heuristicWeights.sumOfRepair();
         float greedyWeight = heuristicWeights.getGreedyInsertWeight() / sumOf;
-        float regretWeight = heuristicWeights.getRegretInsertWeight() / sumOf;
+        float regret_2_Weight = heuristicWeights.getRegret_2_InsertWeight() / sumOf;
+        float regret_3_Weight = heuristicWeights.getRegret_3_InsertWeight() / sumOf;
+        float regret_K_Weight = heuristicWeights.getRegret_K_InsertWeight() / sumOf;
         double randomValue = random.nextDouble();
         if(randomValue < greedyWeight) {
             heuristicWeights.setCurrentInsert(1);
             greedyInsertKim(data, nodesToSwap);
-        } else if (randomValue < greedyWeight + regretWeight) {
+        } else if (randomValue < greedyWeight + regret_2_Weight) {
             heuristicWeights.setCurrentInsert(2);
+            regretInsertKim(data, nodesToSwap, 2);
+        } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight) {
+            heuristicWeights.setCurrentInsert(3);
             regretInsertKim(data, nodesToSwap, 3);
+        } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight + regret_K_Weight) {
+            heuristicWeights.setCurrentInsert(4);
+            int customerNodeCount = (int) data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
+            regretInsertKim(data, nodesToSwap, customerNodeCount);
         }
 
     }
