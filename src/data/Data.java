@@ -125,7 +125,7 @@ public class Data {
         return this.nodeList.get(0);
     }
 
-    public Node findNextNodeKim(Vehicle currentVehicle, Node currentNode) {
+    public Node findNextNode(Vehicle currentVehicle, Node currentNode) {
         float distance = Float.MAX_VALUE;
         Node nextNode = new Node();
         nextNode.setNullNode(true);
@@ -198,17 +198,6 @@ public class Data {
     }
 
     public void destroyInfo() {
-        for(Vehicle vehicle : fleet) {
-            vehicle.setCapacity((float)0);
-            vehicle.setCurrentTime((float) 0);
-            for(Node node : vehicle.getRoute()) {
-                node.setVisited(false);
-                node.setVisitedAt((float) 0);
-            }
-        }
-    }
-
-    public void destroyInfoKim() {
         for(Vehicle vehicle : fleet) {
             vehicle.setCapacity((float)0);
             vehicle.setCurrentTime((float) 0);

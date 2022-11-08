@@ -16,6 +16,7 @@ public class Constants {
     private float R;
     private float ETA;
     private float ZETA;
+    private String dividerString;
 
     public Constants() {
         this.PHI = 9;
@@ -32,6 +33,7 @@ public class Constants {
         this.R = (float) 0.1;
         this.ETA = (float) 0.025;
         this.ZETA = (float) 0.4;
+        this.dividerString = "============================================================";
     }
 
     public int getPHI() {
@@ -144,5 +146,13 @@ public class Constants {
 
     public void setZETA(float ZETA) {
         this.ZETA = ZETA;
+    }
+
+    public String getDividerString() {
+        return dividerString;
+    }
+
+    public void setDividerString(String dividerString) {
+        this.dividerString = dividerString;
     }
 }

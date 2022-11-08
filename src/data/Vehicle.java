@@ -2,7 +2,6 @@ package data;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Vehicle {
 
@@ -131,7 +130,7 @@ public class Vehicle {
         }
     }
 
-    public void initVehicleKim() {
+    public void initVehicle() {
         setCurrentTime((float) 0);
         setCapacity((float)0);
         setPenaltyVehicle(false);
@@ -159,7 +158,7 @@ public class Vehicle {
         return null;
     }
 
-    public float calculateTravelDistanceKim(Data data) {
+    public float calculateTravelDistance(Data data) {
         int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
         if(customerNodeListSize == 0) {
             return 0;
