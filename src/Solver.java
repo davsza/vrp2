@@ -167,6 +167,7 @@ public class Solver {
         logger.log("ALNS initialization started at " + startALNS);
 
         logger.emptyLine();
+        logger.emptyLine();
 
         data.destroyInfo();
         Data bestData = new Data(data);
@@ -176,7 +177,7 @@ public class Solver {
         int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit;
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 1000) {
+        while (numberOfSteps < 5) {
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
             System.out.println(numberOfSteps);
@@ -240,6 +241,7 @@ public class Solver {
             T *= 0.995;
             iterationEnd = System.nanoTime();
             logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
+            logger.emptyLine();
             logger.emptyLine();
         }
 
@@ -410,8 +412,11 @@ public class Solver {
     }
 
     private void regretInsert(Data data, List<Node> nodesToSwap, int p, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
+        long startNanoTime = System.nanoTime();
         logger.log("regretInsert_" + (p == 2 || p == 3 ? p : "k") + " started at: " + startTime);
+
         List<NodeSwap> nodeSwapList;
         float bestDiff, currentValue, diff, initialValue;
         Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
@@ -419,10 +424,14 @@ public class Solver {
         boolean foundVehicleForInsert = false;
         NodeSwap currentNodeSwap;
         Node nodeToInsert;
-        long totalNanoSeconds = 0, startNano, endNano;
+        long totalNanoSecondsForValidityCheckInCurrentIteration = 0, startNano, endNano;
+        long totalInsertValidityCheck = 0;
         while(nodesToSwap.size() > 0) {
-            LocalTime removeStartTime = LocalTime.now();
-            logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + removeStartTime);
+
+            LocalTime insertStartTime = LocalTime.now();
+            long insertStartNanoTime = System.nanoTime();
+            logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + insertStartTime);
+
             initialValue = getDataValue(data);
             nodeSwapList = new ArrayList<>();
             for(Node nodesToInsert : nodesToSwap) {
@@ -432,10 +441,13 @@ public class Solver {
                     for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
                         List<Node> copiedRoute = vehicle.copyRoute();
                         vehicle.getRoute().add(i, nodesToInsert);
+
                         startNano = System.nanoTime();
                         boolean valid = checkForValidity(data, vehicle);
                         endNano = System.nanoTime();
-                        totalNanoSeconds += endNano - startNano;
+
+                        totalNanoSecondsForValidityCheckInCurrentIteration += (endNano - startNano);
+
                         if (valid) {
                             currentValue = getDataValue(data);
                             currentNodeSwap.getValues().add(currentValue);
@@ -453,6 +465,9 @@ public class Solver {
                 }
                 nodeSwapList.add(currentNodeSwap);
             }
+
+            totalInsertValidityCheck += totalNanoSecondsForValidityCheckInCurrentIteration;
+
             nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
                 public int compare(NodeSwap o1, NodeSwap o2) {
@@ -526,18 +541,24 @@ public class Solver {
             }
             nodesToSwap.remove(nodeToInsert);
 
-            LocalTime removeEndTime = LocalTime.now();
-            logger.log("Node insert ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds, " +
-                    "validating data took " + (totalNanoSeconds * 1e9) + " seconds");
+            LocalTime insertEndTime = LocalTime.now();
+            long insertEndNanoTime = System.nanoTime();
+            logger.log("Node insert ended at: " + insertEndTime + ", took " + ((insertEndNanoTime - insertStartNanoTime) * 1e-9) + " seconds, " +
+                    "validating data took " + (totalNanoSecondsForValidityCheckInCurrentIteration * 1e-9) + " seconds");
 
         }
         LocalTime endTime = LocalTime.now();
-        logger.log("regretInsert ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("regretInsert ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+        logger.log("Validating the data took " + (totalInsertValidityCheck * 1e-9) + " seconds");
     }
 
     private void greedyInsert(Data data, List<Node> nodesToSwap, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
+        long startNanoTime = System.nanoTime();
         logger.log("greedyInsert started at: " + startTime);
+
         List<NodeSwap> nodeSwapList;
         float bestDiff, currentValue, diff, initialValue;
         Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
@@ -545,10 +566,14 @@ public class Solver {
         boolean foundVehicleForInsert = false;
         NodeSwap currentNodeSwap;
         Node nodeToInsert;
-        long totalNanoSeconds = 0, startNano, endNano;
+        long totalNanoSecondsForValidityCheckInCurrentIteration = 0, startNano, endNano;
+        long totalInsertValidityCheck = 0;
         while(nodesToSwap.size() > 0) {
-            LocalTime removeStartTime = LocalTime.now();
-            logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + removeStartTime);
+
+            LocalTime insertStartTime = LocalTime.now();
+            long insertStartNanoTime = System.nanoTime();
+            logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + insertStartTime);
+
             nodeSwapList = new ArrayList<>();
             initialValue = getDataValue(data);
             for(Node nodesToInsert : nodesToSwap) {
@@ -557,10 +582,13 @@ public class Solver {
                     for(int i = 1; i < vehicle.getRoute().size() - 1; i++) {
                         List<Node> copiedRoute = vehicle.copyRoute();
                         vehicle.getRoute().add(i, nodesToInsert);
+
                         startNano = System.nanoTime();
                         boolean validSolution = checkForValidity(data, vehicle);
                         endNano = System.nanoTime();
-                        totalNanoSeconds += endNano - startNano;
+
+                        totalNanoSecondsForValidityCheckInCurrentIteration += (endNano - startNano);
+
                         if(validSolution) {
                             currentValue = getDataValue(data);
                             diff = currentValue - initialValue;
@@ -577,6 +605,9 @@ public class Solver {
                 currentNodeSwap = new NodeSwap(nodesToInsert, vehicleToInsertInto, bestDiff, indexToInsert, foundVehicleForInsert);
                 nodeSwapList.add(currentNodeSwap);
             }
+
+            totalInsertValidityCheck += totalNanoSecondsForValidityCheckInCurrentIteration;
+
             nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
                 public int compare(NodeSwap o1, NodeSwap o2) {
@@ -596,12 +627,16 @@ public class Solver {
             }
             nodesToSwap.remove(nodeToInsert);
 
-            LocalTime removeEndTime = LocalTime.now();
-            logger.log("Node insert ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds, " +
-                    "validating data took " + (totalNanoSeconds * 1e9) + " seconds");
+            LocalTime insertEndTime = LocalTime.now();
+            long insertEndNanoTime = System.nanoTime();
+            logger.log("Node insert ended at: " + insertEndTime + ", took " + ((insertEndNanoTime - insertStartNanoTime) * 1e-9) + " seconds, " +
+                    "validating data took " + (totalNanoSecondsForValidityCheckInCurrentIteration * 1e-9) + " seconds");
         }
+
         LocalTime endTime = LocalTime.now();
-        logger.log("greedyInsert ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("greedyInsert ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+        logger.log("Validating the data took " + (totalInsertValidityCheck * 1e-9) + " seconds");
     }
 
     private boolean checkForValidity(Data data, Vehicle vehicle) {
