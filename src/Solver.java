@@ -154,6 +154,8 @@ public class Solver {
 
         LocalTime startALNS = LocalTime.now();
         long startALNSNano = System.nanoTime();
+        long iterationStart;
+        long iterationEnd;
 
         LocalDate date = LocalDate.now();
         LocalTime time = LocalTime.now();
@@ -176,6 +178,7 @@ public class Solver {
         StringBuilder currentVehicleRouteStringBuilder;
         while (numberOfSteps < 1000) {
             logger.log("Iteration " + numberOfSteps);
+            iterationStart = System.nanoTime();
             System.out.println(numberOfSteps);
             currentData = new Data(data);
             currentValue = getDataValue(currentData);
@@ -235,6 +238,8 @@ public class Solver {
             }
             numberOfSteps++;
             T *= 0.995;
+            iterationEnd = System.nanoTime();
+            logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
             logger.emptyLine();
         }
 
@@ -370,6 +375,7 @@ public class Solver {
     private void repairNodes(Data data, List<Node> nodesToSwap, Logger logger) {
 
         LocalTime startTime = LocalTime.now();
+        long repairStart = System.nanoTime();
         logger.log("Repairing nodes started at: " + startTime);
         logger.log("Inserting " + nodesToSwap.size() + " nodes");
 
@@ -399,7 +405,8 @@ public class Solver {
         }
 
         LocalTime endTime = LocalTime.now();
-        logger.log("Repairing nodes ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long repairEnd = System.nanoTime();
+        logger.log("Repairing nodes ended at: " + endTime + ", took " + ((repairEnd - repairStart) * 1e-9) + " seconds");
     }
 
     private void regretInsert(Data data, List<Node> nodesToSwap, int p, Logger logger) {
@@ -638,6 +645,7 @@ public class Solver {
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap, Logger logger) {
 
         LocalTime startTime = LocalTime.now();
+        long destroyStart = System.nanoTime();
         logger.log("Destroying nodes started at: " + startTime);
         logger.log("Removing " + p + " nodes");
 
@@ -662,7 +670,8 @@ public class Solver {
         }
 
         LocalTime endTime = LocalTime.now();
-        logger.log("Destroying nodes ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long destroyEnd = System.nanoTime();
+        logger.log("Destroying nodes ended at: " + endTime + ", took " + ((destroyEnd - destroyStart) * 1e-9) + " seconds");
     }
 
 
