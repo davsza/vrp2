@@ -177,7 +177,7 @@ public class Solver {
         int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit;
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 5) {
+        while (numberOfSteps < 25000) {
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
             System.out.println(numberOfSteps);
@@ -297,12 +297,12 @@ public class Solver {
     }
 
     private void updateWeights(HeuristicWeights heuristicWeights, float r) {
-        float newRandomRemoveWeight = heuristicWeights.getRandomRemoveWeight() * (1 - r)
-                + r * (heuristicWeights.getRandomRemoveScore() / (float)heuristicWeights.getTimesUsedRandomRemove());
-        float newWorstRemoveWeight = heuristicWeights.getWorstRemoveWeight() * (1 - r)
-                + r * (heuristicWeights.getWorstRemoveScore() / (float)heuristicWeights.getTimesUsedWorstRemove());
-        float newRelatedRemoveWeight = heuristicWeights.getRelatedRemoveWeight() * (1 - r)
-                + r * (heuristicWeights.getRelatedRemoveScore() / (float)heuristicWeights.getTimesUsedRelatedRemove());
+        float newRandomRemoveWeight = heuristicWeights.getRandomRemovalWeight() * (1 - r)
+                + r * (heuristicWeights.getRandomRemovalScore() / (float)heuristicWeights.getTimesUsedRandomRemove());
+        float newWorstRemoveWeight = heuristicWeights.getWorstRemovalWeight() * (1 - r)
+                + r * (heuristicWeights.getWorstRemovalScore() / (float)heuristicWeights.getTimesUsedWorstRemove());
+        float newRelatedRemoveWeight = heuristicWeights.getRelatedRemovalWeight() * (1 - r)
+                + r * (heuristicWeights.getRelatedRemovalScore() / (float)heuristicWeights.getTimesUsedRelatedRemove());
         float newGreedyInsertWeight = heuristicWeights.getGreedyInsertWeight() * (1 - r)
                 + r * (heuristicWeights.getGreedyInsertScore() / (float)heuristicWeights.getTimesUsedGreedyInsert());
         float newRegret_2_InsertWeight = heuristicWeights.getRegret_2_InsertWeight() * (1 - r)
@@ -311,16 +311,16 @@ public class Solver {
                 + r * (heuristicWeights.getRegret_3_InsertScore() / (float)heuristicWeights.getTimesUsedRegret_3_Insert());
         float newRegret_K_InsertWeight = heuristicWeights.getRegret_K_InsertWeight() * (1 - r)
                 + r * (heuristicWeights.getRegret_K_InsertScore() / (float)heuristicWeights.getTimesUsedRegret_K_Insert());
-        heuristicWeights.setRandomRemoveWeight(newRandomRemoveWeight);
-        heuristicWeights.setWorstRemoveWeight(newWorstRemoveWeight);
-        heuristicWeights.setRelatedRemoveWeight(newRelatedRemoveWeight);
+        heuristicWeights.setRandomRemovalWeight(newRandomRemoveWeight);
+        heuristicWeights.setWorstRemovalWeight(newWorstRemoveWeight);
+        heuristicWeights.setRelatedRemovalWeight(newRelatedRemoveWeight);
         heuristicWeights.setGreedyInsertWeight(newGreedyInsertWeight);
         heuristicWeights.setRegret_2_InsertWeight(newRegret_2_InsertWeight);
         heuristicWeights.setRegret_3_InsertWeight(newRegret_3_InsertWeight);
         heuristicWeights.setRegret_K_InsertWeight(newRegret_K_InsertWeight);
-        heuristicWeights.setRandomRemoveScore(0);
-        heuristicWeights.setWorstRemoveScore(0);
-        heuristicWeights.setRelatedRemoveScore(0);
+        heuristicWeights.setRandomRemovalScore(0);
+        heuristicWeights.setWorstRemovalScore(0);
+        heuristicWeights.setRelatedRemovalScore(0);
         heuristicWeights.setGreedyInsertScore(0);
         heuristicWeights.setRegret_2_InsertScore(0);
         heuristicWeights.setRegret_3_InsertScore(0);
@@ -337,15 +337,15 @@ public class Solver {
 
         switch (destroyHeuristic){
             case 1:
-                heuristicWeights.setWorstRemoveScore(heuristicWeights.getWorstRemoveScore() + score);
+                heuristicWeights.setWorstRemovalScore(heuristicWeights.getWorstRemovalScore() + score);
                 heuristicWeights.setTimesUsedWorstRemove(heuristicWeights.getTimesUsedWorstRemove() + 1);
                 break;
             case 2:
-                heuristicWeights.setRandomRemoveScore(heuristicWeights.getRandomRemoveScore() + score);
+                heuristicWeights.setRandomRemovalScore(heuristicWeights.getRandomRemovalScore() + score);
                 heuristicWeights.setTimesUsedRandomRemove(heuristicWeights.getTimesUsedRandomRemove() + 1);
                 break;
             case 3:
-                heuristicWeights.setRelatedRemoveScore(heuristicWeights.getRelatedRemoveScore() + score);
+                heuristicWeights.setRelatedRemovalScore(heuristicWeights.getRelatedRemovalScore() + score);
                 heuristicWeights.setTimesUsedRelatedRemove(heuristicWeights.getTimesUsedRelatedRemove() + 1);
                 break;
             default:
@@ -679,15 +679,17 @@ public class Solver {
 
     private void destroyNodes(Data data, int p, List<Node> nodesToSwap, Logger logger) {
 
+
         LocalTime startTime = LocalTime.now();
         long destroyStart = System.nanoTime();
         logger.log("Destroying nodes started at: " + startTime);
         logger.log("Removing " + p + " nodes");
 
         float sumOf = heuristicWeights.sumOfDestroy();
-        float worstWeight = heuristicWeights.getWorstRemoveWeight() / sumOf;
-        float randomWeight = heuristicWeights.getRandomRemoveWeight() / sumOf;
-        float relatedWeight = heuristicWeights.getRelatedRemoveWeight() / sumOf;
+        float worstWeight = heuristicWeights.getWorstRemovalWeight() / sumOf;
+        float randomWeight = heuristicWeights.getRandomRemovalWeight() / sumOf;
+        float relatedWeight = heuristicWeights.getRelatedRemovalWeight() / sumOf;
+        float deleteWeight = heuristicWeights.getDeleteDisposalWeight() / sumOf;
         double randomValue = random.nextDouble();
 
         if(randomValue < worstWeight) {
@@ -702,11 +704,15 @@ public class Solver {
             heuristicWeights.setCurrentRemove(3);
             logger.log("Destroy method: relatedRemoval");
             relatedRemoval(data, p, nodesToSwap, CONSTANTS.getPHI(), CONSTANTS.getCHI(), CONSTANTS.getPSI(), CONSTANTS.getP(), logger);
+        } else if(randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight) {
+            logger.log("Destroy method: deleteDisposal");
+            deleteDisposal(data, nodesToSwap, logger);
         }
 
         LocalTime endTime = LocalTime.now();
         long destroyEnd = System.nanoTime();
         logger.log("Destroying nodes ended at: " + endTime + ", took " + ((destroyEnd - destroyStart) * 1e-9) + " seconds");
+
     }
 
 
@@ -795,6 +801,7 @@ public class Solver {
     }
 
     private void worstRemoval(Data data, int p, List<Node> nodesToSwap, int p_worst, Logger logger) {
+        // TODO: pontosítani a loggert és a timeot
         LocalTime startTime = LocalTime.now();
         logger.log("worstRemoval started at: " + startTime);
         float currentValue;
@@ -842,6 +849,72 @@ public class Solver {
             LocalTime removeEndTime = LocalTime.now();
             logger.log((nodesToSwap.size() + 1) + "th node removal ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds");
         }
+        LocalTime endTime = LocalTime.now();
+        logger.log("worstRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+    }
+
+    private void deleteDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
+        // TODO: pontosítani a loggert és a timeot
+        LocalTime startTime = LocalTime.now();
+        logger.log("deleteDisposal started at: " + startTime);
+
+        List<NodeSwap> nodeSwapList = new ArrayList<>();
+        List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().stream().filter(Node::isDumpingSite).count() > 1).collect(Collectors.toList());
+        if(feasibleVehicles.size() == 0) {
+            return;
+        }
+        for(Vehicle vehicle : feasibleVehicles) {
+            for(int i = 0; i < vehicle.getRoute().size(); i++) {
+                Node node = vehicle.getRoute().get(i);
+                if(node.isDumpingSite()) {
+                    NodeSwap nodeSwap = new NodeSwap(node, vehicle, 0, i, false);
+                    nodeSwapList.add(nodeSwap);
+                }
+            }
+        }
+
+        int randomIndex = random.nextInt(nodeSwapList.size());
+        NodeSwap nodeSwap = nodeSwapList.get(randomIndex);
+        Vehicle vehicle = nodeSwap.getVehicle();
+        Node dumpingSite = nodeSwap.getNode();
+        int dumpingSiteIndex = nodeSwap.getIndex();
+
+        if(vehicle.getRoute().get(dumpingSiteIndex + 1).isDepot()) {
+            Node currentNode = dumpingSite;
+            vehicle.getRoute().remove(currentNode);
+            currentNode = vehicle.getRoute().get(dumpingSiteIndex - 1);
+            while (!currentNode.isDumpingSite()) {
+                nodesToSwap.add(currentNode);
+                vehicle.getRoute().remove(currentNode);
+                dumpingSiteIndex--;
+                currentNode = vehicle.getRoute().get(dumpingSiteIndex - 1);
+            }
+        } else {
+            int maximumCapacity = vehicle.getMaximumCapacity();
+            int startingIndex = vehicle.getRoute().get(dumpingSiteIndex - 1).isDepot() ? 1 : nodeSwapList.get(randomIndex - 1).getIndex() + 1;
+            float overallQuantity = 0;
+            for(int i = startingIndex; i < nodeSwapList.get(randomIndex + 1).getIndex(); i++) {
+                Node node = vehicle.getRoute().get(i);
+                if(!node.isDumpingSite()) {
+                    overallQuantity += node.getQuantity();
+                }
+            }
+            vehicle.getRoute().remove(dumpingSite);
+            int numberOfNodesRemoved = 0;
+            while(overallQuantity > maximumCapacity) {
+                Node currentNode = vehicle.getRoute().get(dumpingSiteIndex - 1);
+                overallQuantity -= currentNode.getQuantity();
+                nodesToSwap.add(currentNode);
+                vehicle.getRoute().remove(currentNode);
+                numberOfNodesRemoved++;
+                if(numberOfNodesRemoved % 2 == 0) {
+                    dumpingSiteIndex--;
+                }
+            }
+        }
+
+        boolean valid = checkForValidity(data, vehicle);
+
         LocalTime endTime = LocalTime.now();
         logger.log("worstRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
     }
