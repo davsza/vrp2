@@ -5,7 +5,7 @@ import java.io.IOException;
 public class Logger {
 
     private String path;
-    private StringBuilder stringBuilder;
+    private final StringBuilder stringBuilder;
 
     public Logger() {
         this.stringBuilder = new StringBuilder();
