@@ -41,6 +41,7 @@ public class Node {
         this.dumpingSite = node.getDumpingSite();
         this.nullNode = node.getNullNode();
         this.visitedAt = node.getVisitedAt();
+        this.relatednessValue = node.getRelatednessValue();
     }
 
     public Float getRelatednessValue() {

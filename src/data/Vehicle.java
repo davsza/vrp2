@@ -16,9 +16,11 @@ public class Vehicle {
     private Integer maximumCapacity;
     private Integer id;
     private Boolean penaltyVehicle;
+    private List<Float> arrivalTimes;
 
     public Vehicle() {
         this.route = new ArrayList<>();
+        this.arrivalTimes = new ArrayList<>();
     }
 
     public Vehicle(Vehicle vehicle) {
@@ -36,6 +38,15 @@ public class Vehicle {
         this.maximumCapacity = vehicle.getMaximumCapacity();
         this.id = vehicle.getId();
         this.penaltyVehicle = vehicle.isPenaltyVehicle();
+        this.arrivalTimes = vehicle.getArrivalTimes();
+    }
+
+    public List<Float> getArrivalTimes() {
+        return arrivalTimes;
+    }
+
+    public void setArrivalTimes(List<Float> arrivalTimes) {
+        this.arrivalTimes = arrivalTimes;
     }
 
     public List<Node> getRoute() {

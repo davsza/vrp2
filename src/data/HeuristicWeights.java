@@ -6,17 +6,21 @@ public class HeuristicWeights {
     private float worstRemovalWeight;
     private float relatedRemovalWeight;
     private float deleteDisposalWeight;
+    private float swapDisposalWeight;
+    private float insertDisposalWeight;
     private float greedyInsertWeight;
     private float regret_2_InsertWeight;
     private float regret_3_InsertWeight;
     private float regret_K_InsertWeight;
-    private int currentRemove; // 1: randomRemove; 2: worstRemove; 3: relatedRemove; 4: deleteDisposal
+    private int currentRemove; // 1: randomRemove; 2: worstRemove; 3: relatedRemove; 4: deleteDisposal; 5: swapDisposal; 6: insertDisposal
     private int currentInsert; // 1: greedyInsert; 2: regret_2_Insert; 3: regret_3_Insert; 4: regret_K_InsertWeight
 
     private int timesUsedRandomRemove;
     private int timesUsedWorstRemove;
     private int timesUsedRelatedRemove;
     private int timesUsedDeleteDisposal;
+    private int timesUsedSwapDisposal;
+    private int timesUsedInsertDisposal;
     private int timesUsedGreedyInsert;
     private int timesUsedRegret_2_Insert;
     private int timesUsedRegret_3_Insert;
@@ -25,6 +29,8 @@ public class HeuristicWeights {
     private int worstRemovalScore;
     private int relatedRemovalScore;
     private int deleteDisposalScore;
+    private int swapDisposalScore;
+    private int insertDisposalScore;
     private int greedyInsertScore;
     private int regret_2_InsertScore;
     private int regret_3_InsertScore;
@@ -35,6 +41,8 @@ public class HeuristicWeights {
         this.worstRemovalWeight = 1;
         this.relatedRemovalWeight = 1;
         this.deleteDisposalWeight = 1;
+        this.swapDisposalWeight = 1;
+        this.insertDisposalWeight = 1;
         this.greedyInsertWeight = 1;
         this.regret_2_InsertWeight = 1;
         this.regret_3_InsertWeight = 1;
@@ -45,6 +53,8 @@ public class HeuristicWeights {
         this.timesUsedWorstRemove = 0;
         this.timesUsedRelatedRemove = 0;
         this.timesUsedDeleteDisposal = 0;
+        this.timesUsedSwapDisposal = 0;
+        this.timesUsedInsertDisposal = 0;
         this.timesUsedGreedyInsert = 0;
         this.timesUsedRegret_2_Insert = 0;
         this.timesUsedRegret_3_Insert = 0;
@@ -53,21 +63,12 @@ public class HeuristicWeights {
         this.worstRemovalScore = 0;
         this.relatedRemovalScore = 0;
         this.deleteDisposalScore = 0;
+        this.swapDisposalScore = 0;
+        this.insertDisposalScore = 0;
         this.greedyInsertScore = 0;
         this.regret_2_InsertScore = 0;
         this.regret_3_InsertScore = 0;
         this.regret_K_InsertScore = 0;
-    }
-
-    public void reset() {
-        setRandomRemovalWeight(0);
-        setWorstRemovalWeight(0);
-        setRelatedRemovalWeight(0);
-        setDeleteDisposalWeight(0);
-        setGreedyInsertWeight(0);
-        setRegret_2_InsertWeight(0);
-        setRegret_3_InsertWeight(0);
-        setRegret_K_InsertWeight(0);
     }
 
     public float sumOfRepair() {
@@ -75,7 +76,7 @@ public class HeuristicWeights {
     }
 
     public float sumOfDestroy() {
-        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight();
+        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight() + getSwapDisposalWeight() + getInsertDisposalWeight();
     }
 
     public float getRandomRemovalWeight() {
@@ -108,6 +109,22 @@ public class HeuristicWeights {
 
     public void setDeleteDisposalWeight(float deleteDisposalWeight) {
         this.deleteDisposalWeight = deleteDisposalWeight;
+    }
+
+    public float getSwapDisposalWeight() {
+        return swapDisposalWeight;
+    }
+
+    public void setSwapDisposalWeight(float swapDisposalWeight) {
+        this.swapDisposalWeight = swapDisposalWeight;
+    }
+
+    public float getInsertDisposalWeight() {
+        return insertDisposalWeight;
+    }
+
+    public void setInsertDisposalWeight(float insertDisposalWeight) {
+        this.insertDisposalWeight = insertDisposalWeight;
     }
 
     public float getGreedyInsertWeight() {
@@ -190,6 +207,22 @@ public class HeuristicWeights {
         this.timesUsedDeleteDisposal = timesUsedDeleteDisposal;
     }
 
+    public int getTimesUsedSwapDisposal() {
+        return timesUsedSwapDisposal;
+    }
+
+    public void setTimesUsedSwapDisposal(int timesUsedSwapDisposal) {
+        this.timesUsedSwapDisposal = timesUsedSwapDisposal;
+    }
+
+    public int getTimesUsedInsertDisposal() {
+        return timesUsedInsertDisposal;
+    }
+
+    public void setTimesUsedInsertDisposal(int timesUsedInsertDisposal) {
+        this.timesUsedInsertDisposal = timesUsedInsertDisposal;
+    }
+
     public int getTimesUsedGreedyInsert() {
         return timesUsedGreedyInsert;
     }
@@ -252,6 +285,22 @@ public class HeuristicWeights {
 
     public void setDeleteDisposalScore(int deleteDisposalScore) {
         this.deleteDisposalScore = deleteDisposalScore;
+    }
+
+    public int getSwapDisposalScore() {
+        return swapDisposalScore;
+    }
+
+    public void setSwapDisposalScore(int swapDisposalScore) {
+        this.swapDisposalScore = swapDisposalScore;
+    }
+
+    public int getInsertDisposalScore() {
+        return insertDisposalScore;
+    }
+
+    public void setInsertDisposalScore(int insertDisposalScore) {
+        this.insertDisposalScore = insertDisposalScore;
     }
 
     public int getGreedyInsertScore() {
