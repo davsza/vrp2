@@ -76,7 +76,7 @@ public class HeuristicWeights {
     }
 
     public float sumOfDestroy() {
-        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight() + getSwapDisposalWeight() + getInsertDisposalWeight();
+        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight() + getSwapDisposalWeight();// + getInsertDisposalWeight();
     }
 
     public float getRandomRemovalWeight() {

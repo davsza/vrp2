@@ -136,6 +136,7 @@ public class Data {
                     && capacityCheck(currentVehicle, node)
                     && maximumNodesVisited(currentVehicle)
                     && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)
+                    && currentVehicle.getCurrentTime() + travelDistance >= node.getTimeStart()
                     && checkForDepotTW(currentVehicle, currentNode)) {
                 distance = travelDistance;
                 nextNode = node;
