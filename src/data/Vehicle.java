@@ -38,7 +38,10 @@ public class Vehicle {
         this.maximumCapacity = vehicle.getMaximumCapacity();
         this.id = vehicle.getId();
         this.penaltyVehicle = vehicle.isPenaltyVehicle();
-        this.arrivalTimes = vehicle.getArrivalTimes();
+        this.arrivalTimes = new ArrayList<>();
+        for(Float arrivalTime : vehicle.getArrivalTimes()) {
+            this.arrivalTimes.add(arrivalTime.floatValue());
+        }
     }
 
     public List<Float> getArrivalTimes() {
@@ -170,7 +173,10 @@ public class Vehicle {
     }
 
     public float calculateTravelDistance(Data data) {
-        int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
+        // TODO: for loop
+        //int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
+        int customerNodeListSize = 0;
+        for(Node node : route) if(!node.isDepot() && !node.isDumpingSite()) customerNodeListSize++;
         if(customerNodeListSize == 0) {
             return 0;
         }

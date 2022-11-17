@@ -189,18 +189,19 @@ public class Solver {
         Data currentData;
         float T = calculateInitialTemperature(data, CONSTANTS.getW()), bestValue = getDataValue(bestData), currentValue, newValue, delta;
         List<Node> nodesToSwap;
-        int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit;
+        int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit, noBetterSolutionFound = 0, customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4);
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 10) {
+        while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
             System.out.println(numberOfSteps + " of " + data.getInfo());
+            System.out.println("Better solution hasn't been found in " + noBetterSolutionFound + " iteration");
             currentData = new Data(data);
             currentValue = getDataValue(currentData);
             logger.log("Current data value: " + currentValue);
             nodesToSwap = new ArrayList<>();
-            upperLimit = Math.min(100, (int) (currentData.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4));
+            upperLimit = Math.min(100, customerNodeCount);
             numberOfNodesToSwap = random.nextInt(upperLimit - 4) + 4;
             System.out.println("nodes to swap: " + numberOfNodesToSwap);
             logger.log("Number of nodes to swap: " + numberOfNodesToSwap);
@@ -240,6 +241,8 @@ public class Solver {
 
             if (newValue < bestValue) {
 
+                noBetterSolutionFound = 0;
+
                 if (!hashes.contains(hashCode)) {
                     score = CONSTANTS.getSIGMA_1();
                     hashes.add(hashCode);
@@ -250,6 +253,8 @@ public class Solver {
                 updateArrivalTimes(bestData);
                 logger.log("New best solution found");
 
+            } else {
+                noBetterSolutionFound++;
             }
 
             updateHeuristicInformation(heuristicWeights, score, logger);
@@ -312,7 +317,11 @@ public class Solver {
     }
 
     private void updateArrivalTimes(Data data) {
-        List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        // TODO: update only those vehicles arrival times on which there has been change
+        // TODO: for loop
+        //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        List<Vehicle> feasibleVehicles = new ArrayList<>();
+        for(Vehicle vehicle : data.getFleet()) if(vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
         for(Vehicle vehicle : feasibleVehicles) {
             vehicle.getArrivalTimes().clear();
             Node currentNode = vehicle.getRoute().get(0), previousNode;
@@ -508,7 +517,10 @@ public class Solver {
 
             initialValue = getDataValue(data);
             nodeSwapList = new ArrayList<>();
-            List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle()).collect(Collectors.toList());
+            // TODO: for loop
+            //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle()).collect(Collectors.toList());
+            List<Vehicle> feasibleVehicles = new ArrayList<>();
+            for(Vehicle vehicle : data.getFleet()) if(!vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
             for (Node nodesToInsert : nodesToSwap) {
                 totalNanoSecondsForValidityCheckInCurrentIteration = 0;
                 bestDiff = Float.MAX_VALUE;
@@ -519,7 +531,7 @@ public class Solver {
                     checkedEmptyVehicle = vehicle.getRoute().size() == 3;
                     int vehicleRouteSize = vehicle.getRoute().size();
                     for (int i = 1; i < vehicleRouteSize - 1; i++) {
-                        // TODO: if(wrong){continue;}
+
                         float previousNodeArrivalTime = vehicle.getArrivalTimes().get(i - 1);
                         Node previousNode = vehicle.getRoute().get(i - 1);
                         Node nextNode = vehicle.getRoute().get(i + 1);
@@ -677,7 +689,10 @@ public class Solver {
 
             nodeSwapList = new ArrayList<>();
             initialValue = getDataValue(data);
-            List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle()).collect(Collectors.toList());
+            // TODO: for loop
+            //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle()).collect(Collectors.toList());
+            List<Vehicle> feasibleVehicles = new ArrayList<>();
+            for(Vehicle vehicle : data.getFleet()) if(!vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
             for (Node nodesToInsert : nodesToSwap) {
                 totalNanoSecondsForValidityCheckInCurrentIteration = 0;
                 bestDiff = Float.MAX_VALUE;
@@ -819,32 +834,26 @@ public class Solver {
         if (randomValue < worstWeight) {
             heuristicWeights.setCurrentRemove(1);
             logger.log("Destroy method: worstRemoval");
-            System.out.println("Destroy method: worstRemoval");
             worstRemoval(data, p, nodesToSwap, CONSTANTS.getP_WORST(), logger);
         } else if (randomValue < worstWeight + randomWeight) {
             heuristicWeights.setCurrentRemove(2);
             logger.log("Destroy method: randomRemoval");
-            System.out.println("Destroy method: randomRemoval");
             randomRemoval(data, p, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight) {
             heuristicWeights.setCurrentRemove(3);
             logger.log("Destroy method: relatedRemoval");
-            System.out.println("Destroy method: relatedRemoval");
             relatedRemoval(data, p, nodesToSwap, CONSTANTS.getPHI(), CONSTANTS.getCHI(), CONSTANTS.getPSI(), CONSTANTS.getP(), logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight) {
             heuristicWeights.setCurrentRemove(4);
             logger.log("Destroy method: deleteDisposal");
-            System.out.println("Destroy method: deleteDisposal");
             deleteDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight) {
             heuristicWeights.setCurrentRemove(5);
             logger.log("Destroy method: swapDisposal");
-            System.out.println("Destroy method: swapDisposal");
             swapDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight + insertWeight) {
             heuristicWeights.setCurrentRemove(5);
             logger.log("Destroy method: insertDisposal");
-            System.out.println("Destroy method: insertDisposal");
             insertDisposal(data, nodesToSwap, logger);
         }
 
@@ -870,8 +879,15 @@ public class Solver {
             randomIndex = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
             Node nodeToCompare = nodesToSwap.get(randomIndex);
             data.calculateVisitingTime();
-            for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
-                for (Node node : vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList())) {
+            // TODO: for loop
+            //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+            List<Vehicle> feasibleVehicles = new ArrayList<>();
+            for(Vehicle vehicle : data.getFleet()) if(vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
+            for (Vehicle vehicle : feasibleVehicles) {
+                //List<Node> feasibleNodes = vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
+                List<Node> feasibleNodes = new ArrayList<>();
+                for(Node node : vehicle.getRoute()) if(!node.isDepot() && !node.isDumpingSite()) feasibleNodes.add(node);
+                for (Node node : feasibleNodes) {
                     currentNodeSwap = new NodeSwap();
                     float relatedness = phi * data.getDistanceBetweenNode(nodeToCompare, node)
                             + chi * Math.abs(nodeToCompare.getVisitedAt() - node.getVisitedAt())
@@ -908,13 +924,15 @@ public class Solver {
     private void randomRemoval(Data data, int p, List<Node> nodesToSwap, Logger logger) {
         LocalTime startTime = LocalTime.now();
         logger.log("randomRemoval started at: " + startTime);
-        List<Node> feasibleNodesToRemove;
+        List<Node> feasibleNodesToRemove = new ArrayList<>();
         int numberOfFeasibleNodesToRemove, index;
         boolean found;
         while (nodesToSwap.size() < p) {
             LocalTime removeStartTime = LocalTime.now();
             logger.log((nodesToSwap.size() + 1) + "th node removal started at: " + removeStartTime);
-            feasibleNodesToRemove = data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
+            // TODO: for loop
+            //feasibleNodesToRemove = data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
+            for(Node node : data.getNodeList()) if(!node.isDepot() && !node.isDumpingSite()) feasibleNodesToRemove.add(node);
             numberOfFeasibleNodesToRemove = feasibleNodesToRemove.size();
             index = random.nextInt(numberOfFeasibleNodesToRemove);
             Node nodeToRemove = feasibleNodesToRemove.get(index);
@@ -948,7 +966,11 @@ public class Solver {
             LocalTime removeStartTime = LocalTime.now();
             logger.log((nodesToSwap.size() + 1) + "th node removal started at: " + removeStartTime);
             nodeSwapList = new ArrayList<>();
-            for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
+            // TODO: for loop
+            //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+            List<Vehicle> feasibleVehicles = new ArrayList<>();
+            for(Vehicle vehicle : data.getFleet()) if(vehicle.getRoute().size() > 0) feasibleVehicles.add(vehicle);
+            for (Vehicle vehicle : feasibleVehicles) {
                 for (int i = 0; i < vehicle.getRoute().size(); i++) {
                     Node node = vehicle.getRoute().get(i);
                     NodeSwap currentNodeSwap = new NodeSwap();
@@ -994,10 +1016,27 @@ public class Solver {
         logger.log("deleteDisposal started at: " + startTime);
 
         List<NodeSwap> nodeSwapList = new ArrayList<>();
-        List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().stream().filter(Node::isDumpingSite).count() > 1).collect(Collectors.toList());
+        //only those routes where are more than one dump
+        // TODO: for loop
+        //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().stream().filter(Node::isDumpingSite).count() > 1).collect(Collectors.toList());
+        List<Vehicle> feasibleVehicles = new ArrayList<>();
+        for(Vehicle vehicle : data.getFleet()) {
+            int dumpingSites = 0;
+            for(Node node : vehicle.getRoute()) {
+                if(node.isDumpingSite()) {
+                    dumpingSites++;
+                }
+            }
+            if(dumpingSites > 1) {
+                feasibleVehicles.add(vehicle);
+            }
+        }
         if (feasibleVehicles.size() == 0) {
+            //if its 0, we can not delete that, return
             return;
         }
+
+        //get all the dumps from all the vehicles
         for (Vehicle vehicle : feasibleVehicles) {
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);
@@ -1008,14 +1047,21 @@ public class Solver {
             }
         }
 
+        //get a random disposal from the available
         int randomIndex = random.nextInt(nodeSwapList.size());
         NodeSwap nodeSwap = nodeSwapList.get(randomIndex);
         Vehicle vehicle = nodeSwap.getVehicle();
+        //this is the exact dump
         Node dumpingSite = nodeSwap.getNode();
+        //and the index where it is in the route
         int dumpingSiteIndex = nodeSwap.getIndex();
 
+        // TODO: for loop
         nodeSwapList.stream().filter(nodeSwap1 -> nodeSwap1.getVehicle() == vehicle).collect(Collectors.toList());
 
+        //I might not need the sort at all, since in the loop line 1006 I put the dump from the vehicle in order, so they'll be next to
+        //each other, also when I filter them
+        /*
         nodeSwapList.sort(new Comparator<NodeSwap>() {
             @Override
             public int compare(NodeSwap o1, NodeSwap o2) {
@@ -1023,6 +1069,9 @@ public class Solver {
             }
         });
 
+         */
+
+        //if the chosen dump is the last one, so the next one is the depot
         if (vehicle.getRoute().get(dumpingSiteIndex + 1).isDepot()) {
             Node currentNode = dumpingSite;
             vehicle.getRoute().remove(currentNode);
@@ -1037,10 +1086,8 @@ public class Solver {
             int maximumCapacity = vehicle.getMaximumCapacity();
             int startingIndex = nodeSwapList.indexOf(nodeSwap) == 0 ? 1 : nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) - 1).getIndex();
             float overallQuantity = 0;
-            for (int i = startingIndex; i < nodeSwapList.get(randomIndex + 1).getIndex(); i++) {
-                if(i == vehicle.getRoute().size()) {
-                    System.out.println("");
-                }
+            for (int i = startingIndex; i < nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) + 1).getIndex(); i++) {
+                //TODO: itt hal meg (?)
                 Node node = vehicle.getRoute().get(i);
                 if (!node.isDumpingSite()) {
                     overallQuantity += node.getQuantity();
@@ -1066,7 +1113,17 @@ public class Solver {
 
     private void swapDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
         List<NodeSwap> nodeSwapList = new ArrayList<>();
-        List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        // TODO: for loop
+        //int numberOfDisposalSites = (int) data.getNodeList().stream().filter(Node::isDumpingSite).count();
+        int numberOfDisposalSites = 0;
+        for(Node node : data.getNodeList()) if(node.isDumpingSite()) numberOfDisposalSites++;
+        if(numberOfDisposalSites == 1) {
+            return;
+        }
+        // TODO: for loop
+        //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        List<Vehicle> feasibleVehicles = new ArrayList<>();
+        for(Vehicle vehicle : data.getFleet()) if(vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
         for (Vehicle vehicle : feasibleVehicles) {
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);
@@ -1083,7 +1140,10 @@ public class Solver {
         Node dumpingSite = nodeSwap.getNode();
         int dumpingSiteIndex = nodeSwap.getIndex();
 
-        List<Node> disposalSitesToSwapWith = data.getNodeList().stream().filter(disposalSite -> disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSite.getId()).collect(Collectors.toList());
+        // TODO: for loop
+        //List<Node> disposalSitesToSwapWith = data.getNodeList().stream().filter(disposalSite -> disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSite.getId()).collect(Collectors.toList());
+        List<Node> disposalSitesToSwapWith = new ArrayList<>();
+        for(Node disposalSite : data.getNodeList()) if(disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSite.getId()) disposalSitesToSwapWith.add(disposalSite);
         randomIndex = random.nextInt(disposalSitesToSwapWith.size());
         Node disposalSiteToSwapWith = disposalSitesToSwapWith.get(randomIndex);
 
@@ -1099,6 +1159,7 @@ public class Solver {
             travelDistance = data.getDistanceBetweenNode(previousNode, disposalSiteToSwapWith);
             arrivalTimeAtDisposalSite = arrivalTimeAtPreviousNode + serviceTime + travelDistance;
             if(arrivalTimeAtDisposalSite <= disposalTimeEnd) {
+                //TODO: itt hal meg (?)
                 vehicle.getArrivalTimes().set(dumpingSiteIndex, Math.max(arrivalTimeAtDisposalSite, disposalSiteToSwapWith.getTimeStart()));
                 updateArrivalTimes(data);
                 break;
@@ -1126,13 +1187,22 @@ public class Solver {
     }
 
     private void insertDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
-        List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        // TODO: for loop
+        //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
+        List<Vehicle> feasibleVehicles = new ArrayList<>();
+        for(Vehicle vehicle : data.getFleet()) if(vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
         int randomIndex = random.nextInt(feasibleVehicles.size());
         Vehicle vehicleToInsertInto = feasibleVehicles.get(randomIndex);
-        List<Node> disposalSites = vehicleToInsertInto.getRoute().stream().filter(Node::isDumpingSite).collect(Collectors.toList());
+        // TODO: for loop
+        //List<Node> disposalSites = vehicleToInsertInto.getRoute().stream().filter(Node::isDumpingSite).collect(Collectors.toList());
+        List<Node> disposalSites = new ArrayList<>();
+        for(Node node : vehicleToInsertInto.getRoute()) if(node.isDumpingSite()) disposalSites.add(node);
         Node dumpingSiteToInsertAfter = disposalSites.get(disposalSites.size() - 1);
 
-        List<Node> disposalSitesToSwapWith = data.getNodeList().stream().filter(disposalSite -> disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSiteToInsertAfter.getId()).collect(Collectors.toList());
+        // TODO: for looő
+        //List<Node> disposalSitesToSwapWith = data.getNodeList().stream().filter(disposalSite -> disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSiteToInsertAfter.getId()).collect(Collectors.toList());
+        List<Node> disposalSitesToSwapWith = new ArrayList<>();
+        for(Node disposalSite : data.getNodeList()) if(disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSiteToInsertAfter.getId()) disposalSitesToSwapWith.add(disposalSite);
         randomIndex = random.nextInt(disposalSitesToSwapWith.size());
         Node disposalSiteToInsert = disposalSitesToSwapWith.get(randomIndex);
 
