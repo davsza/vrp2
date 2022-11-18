@@ -145,7 +145,7 @@ public class Data {
         return nextNode;
     }
 
-    // TODO: fix needed
+    // TODO: fix needed, depot endtime reached
     private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode) {
         Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode);
         float travelDistanceFromCurrentNodeToDumpingSite = getDistanceBetweenNode(currentNode, dumpingSite);

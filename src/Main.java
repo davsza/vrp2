@@ -19,7 +19,6 @@ public class Main {
 
         Solver solver = new Solver(dataList);
         Logger logger;
-        startTime = System.currentTimeMillis();
         for(Data data : dataList) {
             logger = new Logger();
             logger.setPath("C:\\Users\\david\\Documents\\Szakdoga\\results\\" + data.getInfo() + ".txt");
