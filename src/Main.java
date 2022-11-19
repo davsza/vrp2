@@ -5,10 +5,10 @@ import java.util.*;
 public class Main {
     public static void main(String[] args) {
         Parser parser = new Parser();
-        ParseData(parser);
+        parseData(parser);
     }
 
-    public static void ParseData(Parser parser) {
+    public static void parseData(Parser parser) {
         parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\test");
         parser.setFolder();
 
