@@ -191,7 +191,7 @@ public class Solver {
         int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit, noBetterSolutionFound = 0, customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4);
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 250 && noBetterSolutionFound < 2000) {
+        while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
             long arrivalTimeUpdateTimeTotal = 0;
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();

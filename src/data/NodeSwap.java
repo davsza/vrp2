@@ -1,9 +1,6 @@
 package data;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class NodeSwap {
 
@@ -14,6 +11,7 @@ public class NodeSwap {
     private boolean foundVehicleForNodeToInsert;
     private Set<Vehicle> vehicleSet;
     private List<Float> values;
+    private List<NodeSwap> regretNodeSwapList;
 
     public NodeSwap(Node node, Vehicle vehicle, float value, int index, boolean foundVehicleForNodeToInsert) {
         this.node = node;
@@ -27,10 +25,22 @@ public class NodeSwap {
         this.node = node;
         this.vehicleSet = new HashSet<>();
         this.values = new ArrayList<>();
+        this.regretNodeSwapList = new ArrayList<>();
     }
 
     public NodeSwap() {
+    }
 
+    public int getNumberOfFeasibleVehiclesToInsertInto() {
+        return regretNodeSwapList.size();
+    }
+
+    public List<NodeSwap> getRegretNodeSwapList() {
+        return regretNodeSwapList;
+    }
+
+    public void setRegretNodeSwapList(List<NodeSwap> regretNodeSwapList) {
+        this.regretNodeSwapList = regretNodeSwapList;
     }
 
     public Set<Vehicle> getVehicleSet() {
@@ -87,5 +97,23 @@ public class NodeSwap {
 
     public void setIndex(int index) {
         this.index = index;
+    }
+
+    public void sortRegretList() {
+        regretNodeSwapList.sort(new Comparator<NodeSwap>() {
+            @Override
+            public int compare(NodeSwap o1, NodeSwap o2) {
+                return (Float.compare(o1.getValue(), o2.getValue()));
+            }
+        });
+    }
+
+    public float getRegretSum(int index) {
+        float sum = 0;
+        float bestValue = regretNodeSwapList.get(0).getValue();
+        for(int i = 1; i < index; i++) {
+            sum += regretNodeSwapList.get(i).getValue() - bestValue;
+        }
+        return sum;
     }
 }
