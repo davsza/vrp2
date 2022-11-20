@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 public class Solver {
 
     private final List<Data> dataList;
-    private HeuristicWeights heuristicWeights;
     private final Random random;
     private final List<String> hashes;
     private final Constants CONSTANTS;
@@ -23,7 +22,7 @@ public class Solver {
         this.heuristics = new Heuristics(this);
     }
 
-    public float initGreedy(Data data, Logger logger) {
+    public void initGreedy(Data data, Logger logger) {
 
         LocalTime startGreedy = LocalTime.now();
         long startGreedyNano = System.nanoTime();
@@ -161,10 +160,9 @@ public class Solver {
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());
 
-        return 0;
     }
 
-    public Data ALNS(Data data, Logger logger) {
+    public void ALNS(Data data, Logger logger) {
 
         LocalTime startALNS = LocalTime.now();
         long startALNSNano = System.nanoTime();
@@ -183,7 +181,7 @@ public class Solver {
         logger.emptyLine();
         logger.emptyLine();
 
-        heuristicWeights = new HeuristicWeights();
+        HeuristicWeights heuristicWeights = new HeuristicWeights();
 
         data.destroyInfo();
         Data bestData = new Data(data);
@@ -193,21 +191,25 @@ public class Solver {
         int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit, noBetterSolutionFound = 0, customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4);
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
+        while (numberOfSteps < 250 && noBetterSolutionFound < 2000) {
+            long arrivalTimeUpdateTimeTotal = 0;
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
-            //System.out.println(numberOfSteps + " of " + data.getInfo());
+            System.out.println(numberOfSteps + " of " + data.getInfo());
             //System.out.println("Better solution hasn't been found in " + noBetterSolutionFound + " iteration");
             currentData = new Data(data);
             currentValue = getDataValue(currentData);
             logger.log("Current data value: " + currentValue);
             nodesToSwap = new ArrayList<>();
             upperLimit = Math.min(100, customerNodeCount);
-            numberOfNodesToSwap = 4;//random.nextInt(upperLimit - 4) + 4;
+            numberOfNodesToSwap = random.nextInt(upperLimit - 4) + 4;
             //System.out.println("nodes to swap: " + numberOfNodesToSwap);
             logger.log("Number of nodes to swap: " + numberOfNodesToSwap);
             heuristics.destroyNodes(currentData, numberOfNodesToSwap, nodesToSwap, heuristicWeights, logger);
+            long a = System.nanoTime();
             updateArrivalTimes(currentData);
+            long b = System.nanoTime();
+            arrivalTimeUpdateTimeTotal += (b - a);
             heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger);
             newValue = getDataValue(currentData);
             logger.log("New data value: " + newValue);
@@ -224,7 +226,10 @@ public class Solver {
                 }
 
                 data = currentData;
+                a = System.nanoTime();
                 updateArrivalTimes(data);
+                b = System.nanoTime();
+                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("Solution accepted by default");
 
             } else if (Math.exp(-1 * (delta) / T) > Math.random()) {
@@ -235,7 +240,10 @@ public class Solver {
                 }
 
                 data = currentData;
+                a = System.nanoTime();
                 updateArrivalTimes(data);
+                b = System.nanoTime();
+                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("Solution accepted by chance");
 
             }
@@ -251,7 +259,10 @@ public class Solver {
 
                 bestValue = newValue;
                 bestData = new Data(currentData);
+                a = System.nanoTime();
                 updateArrivalTimes(bestData);
+                b = System.nanoTime();
+                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("New best solution found");
 
             } else {
@@ -267,6 +278,7 @@ public class Solver {
             T *= 0.995;
             iterationEnd = System.nanoTime();
             logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
+            logger.log("Updating arrival times took " + (arrivalTimeUpdateTimeTotal * 1e-9) + " seconds");
             logger.emptyLine();
             logger.emptyLine();
         }
@@ -313,8 +325,6 @@ public class Solver {
 
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());
-
-        return bestData;
     }
 
     public void updateArrivalTimes(Data data) {

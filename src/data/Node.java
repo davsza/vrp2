@@ -12,7 +12,6 @@ public class Node {
     private Float serviceTime;
 
     private Boolean visited;
-    private Boolean ghostNode;
     private Boolean depot;
     private Boolean dumpingSite;
     private Boolean nullNode;
@@ -21,7 +20,6 @@ public class Node {
 
     public Node() {
         this.visited = false;
-        this.ghostNode = false;
         this.depot = false;
         this.dumpingSite = false;
         this.nullNode = false;
@@ -36,7 +34,6 @@ public class Node {
         this.timeEnd = node.getTimeEnd();
         this.serviceTime = node.getServiceTime();
         this.visited = node.getVisited();
-        this.ghostNode = node.getGhostNode();
         this.depot = node.getDepot();
         this.dumpingSite = node.getDumpingSite();
         this.nullNode = node.getNullNode();
@@ -54,10 +51,6 @@ public class Node {
 
     public Boolean getVisited() {
         return visited;
-    }
-
-    public Boolean getGhostNode() {
-        return ghostNode;
     }
 
     public Boolean getDepot() {
@@ -102,15 +95,6 @@ public class Node {
 
     public void setDepot(Boolean depot) {
         this.depot = depot;
-    }
-
-
-    public Boolean isGhostNode() {
-        return ghostNode;
-    }
-
-    public void setGhostNode(Boolean ghostNode) {
-        this.ghostNode = ghostNode;
     }
 
     public Boolean isVisited() {

@@ -132,44 +132,10 @@ public class Vehicle {
         return id;
     }
 
-    public void initVehicle(int size) {
-        setCurrentTime((float) 0);
-        setCapacity((float)0);
-        setPenaltyVehicle(false);
-        for(int i = 0; i < size; i++) {
-            Node node = new Node();
-            node.setGhostNode(true);
-            node.setId(i);
-            route.add(node);
-        }
-    }
-
     public void initVehicle() {
         setCurrentTime((float) 0);
         setCapacity((float)0);
         setPenaltyVehicle(false);
-    }
-
-    public void switchNode(Node fromNode, Node toNode) {
-        this.route.set(fromNode.getId(), toNode);
-    }
-
-    public Node getFirstGhostNode() {
-        for(Node node : route) {
-            if(node.isGhostNode()) {
-                return node;
-            }
-        }
-        return null;
-    }
-
-    public Node getFirstCustomerNode() {
-        for(Node node : route) {
-            if(!node.isGhostNode()) {
-                return node;
-            }
-        }
-        return null;
     }
 
     public float calculateTravelDistance(Data data) {

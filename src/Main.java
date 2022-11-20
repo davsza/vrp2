@@ -22,12 +22,9 @@ public class Main {
         for(Data data : dataList) {
             logger = new Logger();
             logger.setPath("C:\\Users\\david\\Documents\\Szakdoga\\results\\" + data.getInfo() + ".txt");
-            float greedy = solver.initGreedy(data, logger);
-
-            Data alns = solver.ALNS(data, logger);
-
+            solver.initGreedy(data, logger);
+            solver.ALNS(data, logger);
             logger.writeFile();
-
         }
     }
 

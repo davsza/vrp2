@@ -95,15 +95,6 @@ public class Data {
 
     public int getMatrixRowCount() { return this.matrix.length; }
 
-    public void matrixPrint() {
-        for(int i = 0; i < this.matrix.length; i++) {
-            for(int j = 0; j < this.matrix.length; j++) {
-                System.out.print(this.matrix[i][j] + " ");
-            }
-            System.out.println();
-        }
-    }
-
     public void setMatrix(Float[][] matrix) {
         this.matrix = matrix;
     }
@@ -186,14 +177,6 @@ public class Data {
         return arrivalTime <= node.getTimeEnd();
     }
 
-    public boolean customerNode(Node node) {
-        return !node.isGhostNode() && !node.isDepot() && !node.isDumpingSite();
-    }
-
-    private boolean customerNodeAndNotVisitedYet(Node node) {
-        return customerNode(node) && !node.isVisited();
-    }
-
     public float getDistanceBetweenNode(Node nodeFrom, Node nodeTo) {
         return matrix[nodeFrom.getId()][nodeTo.getId()];
     }
@@ -207,10 +190,6 @@ public class Data {
                 node.setVisitedAt((float) 0);
             }
         }
-    }
-
-    public boolean timeWindowCheckWithWaitingTime(Node currentNode, Node nextNode, float currentTime, float travelTime) {
-        return currentTime + currentNode.getServiceTime() + travelTime <= nextNode.getTimeEnd();
     }
 
     public Vehicle getPenaltyVehicle() {
