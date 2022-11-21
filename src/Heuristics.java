@@ -76,12 +76,10 @@ public class Heuristics {
         int indexToInsert = 0;
         NodeSwap currentNodeSwap;
         Node nodeToInsert;
-        long totalNanoSecondsForValidityCheckInCurrentIteration = 0, startNano, endNano;
         long totalInsertValidityCheck = 0;
 
         for (Node nodesToInsert : nodesToSwap) {
             NodeSwap customerNodeSwap = new NodeSwap(nodesToInsert);
-            totalNanoSecondsForValidityCheckInCurrentIteration = 0;
             bestDiff = Float.MAX_VALUE;
             boolean checkedEmptyVehicle = false;
             for (Vehicle vehicle : data.getFleet()) {
@@ -94,7 +92,7 @@ public class Heuristics {
 
                     float previousNodeArrivalTime = vehicle.getArrivalTimes().get(i - 1);
                     Node previousNode = vehicle.getRoute().get(i - 1);
-                    Node nextNode = vehicle.getRoute().get(i + 1);
+                    Node nextNode = vehicle.getRoute().get(i);
                     float serviceTimeAtPreviousNode = previousNode.getServiceTime();
                     float travelDistance = data.getDistanceBetweenNode(previousNode, nodesToInsert);
                     float arrivalTimeAtNode = previousNodeArrivalTime + serviceTimeAtPreviousNode + travelDistance;
@@ -107,17 +105,16 @@ public class Heuristics {
                         continue;
                     }
 
+                    float distanceBetweenNodesToInsert = data.getDistanceBetweenNode(previousNode, nextNode);
+
                     vehicle.getRoute().add(i, nodesToInsert);
 
-                    startNano = System.nanoTime();
-                    boolean valid = solver.checkForValidity(data, vehicle);
-                    endNano = System.nanoTime();
+                    float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, nodesToInsert) + data.getDistanceBetweenNode(nodesToInsert, nextNode);
 
-                    totalNanoSecondsForValidityCheckInCurrentIteration += (endNano - startNano);
+                    boolean valid = solver.checkForValidity(data, vehicle);
 
                     if (valid) {
-                        // TODO: getvalue kiszamolasa felesleges, nodeok kozti kulonseg
-                        currentValue = solver.getDataValue(data);
+                        currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                         diff = currentValue - initialValue;
                         if (diff < bestDiff) {
                             bestDiff = diff;
@@ -135,10 +132,12 @@ public class Heuristics {
                     customerNodeSwap.getRegretNodeSwapList().add(currentNodeSwap);
                 }
             }
-            // TODO: valami nemjo hujujuj
             if(customerNodeSwap.getRegretNodeSwapList().size() != 0) {
                 customerNodeSwap.sortRegretList();
                 nodeSwapList.add(customerNodeSwap);
+            } else {
+                //put the node on the penalty vehicle if we can not insert anywhere
+                penaltyVehicle.getRoute().add(nodesToInsert);
             }
         }
 
@@ -214,6 +213,8 @@ public class Heuristics {
             for(NodeSwap nodeSwap : nodeSwapList) {
 
                 Vehicle finalVehicleToInsertInto = vehicleToInsertInto;
+                // TODO: ide még a szűréshez hozzáadni a penaltyvehiclet?
+                // olyan nodeswapek, ahol a vehicle megyezik
                 List<NodeSwap> nodeSwapsWithSameVehicleList = nodeSwap.getRegretNodeSwapList()
                         .stream()
                         .filter(nodeSwap1 -> nodeSwap1.getVehicle().equals(finalVehicleToInsertInto))
@@ -221,8 +222,9 @@ public class Heuristics {
 
                 if(nodeSwapsWithSameVehicleList.size() == 0) continue;
 
+                // TODO: ha több ilyen nodeswap is megvan, amelyik kocsija megegyezik, akkor mindegyikre vegig kell nezni nem? vagy miert csak az elso van kiveve
                 NodeSwap selectedNodeSwap = nodeSwapsWithSameVehicleList.get(0);
-                Node currentNode = nodeSwap.getNode();
+                Node node = nodeSwap.getNode();
 
                 boolean foundBetterValue = false;
                 currentNodeSwap = null;
@@ -234,30 +236,30 @@ public class Heuristics {
 
                         float previousNodeArrivalTime = vehicleToInsertInto.getArrivalTimes().get(i - 1);
                         Node previousNode = vehicleToInsertInto.getRoute().get(i - 1);
-                        Node nextNode = vehicleToInsertInto.getRoute().get(i + 1);
+                        // TODO: i vagy i + 1 lesz a nextnode?
+                        Node nextNode = vehicleToInsertInto.getRoute().get(i);
                         float serviceTimeAtPreviousNode = previousNode.getServiceTime();
-                        float travelDistance = data.getDistanceBetweenNode(previousNode, currentNode);
+                        float travelDistance = data.getDistanceBetweenNode(previousNode, node);
                         float arrivalTimeAtNode = previousNodeArrivalTime + serviceTimeAtPreviousNode + travelDistance;
 
-                        if (arrivalTimeAtNode > currentNode.getTimeEnd()) {
+                        if (arrivalTimeAtNode > node.getTimeEnd()) {
                             break;
                         }
 
-                        if (currentNode.getTimeStart() > nextNode.getTimeEnd()) {
+                        if (node.getTimeStart() > nextNode.getTimeEnd()) {
                             continue;
                         }
 
-                        vehicleToInsertInto.getRoute().add(i, currentNode);
+                        float distanceBetweenNodesToInsert = data.getDistanceBetweenNode(previousNode, nextNode);
 
-                        startNano = System.nanoTime();
+                        vehicleToInsertInto.getRoute().add(i, node);
+
+                        float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, node) + data.getDistanceBetweenNode(node, nextNode);
+
                         boolean valid = solver.checkForValidity(data, vehicleToInsertInto);
-                        endNano = System.nanoTime();
-
-                        totalNanoSecondsForValidityCheckInCurrentIteration += (endNano - startNano);
 
                         if (valid) {
-                            // TODO: getvalue kiszamolasa felesleges, nodeok kozti kulonseg
-                            currentValue = solver.getDataValue(data);
+                            currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                             diff = currentValue - initialValue;
                             if (diff < bestDiff) {
                                 bestDiff = diff;
@@ -266,8 +268,7 @@ public class Heuristics {
                                 selectedNodeSwap.setValue(diff);
                             }
                         }
-                        vehicleToInsertInto.getRoute().remove(currentNode);
-
+                        vehicleToInsertInto.getRoute().remove(node);
                     }
 
                     if(!selectedNodeSwap.isFoundVehicleForNodeToInsert()) {
@@ -282,17 +283,17 @@ public class Heuristics {
 
                     float distanceBetweenNodesToInsert = data.getDistanceBetweenNode(previousNode, nodeToInsert);
 
-                    vehicleToInsertInto.getRoute().add(indexToInsert, currentNode);
+                    vehicleToInsertInto.getRoute().add(indexToInsert, node);
 
-                    float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, currentNode) + data.getDistanceBetweenNode(currentNode, nodeToInsert);
+                    float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, node) + data.getDistanceBetweenNode(node, nodeToInsert);
 
-                    boolean validSolution = solver.checkForValidity(data, vehicleToInsertInto);
+                    boolean valid = solver.checkForValidity(data, vehicleToInsertInto);
 
-                    if (validSolution) {
+                    if (valid) {
                         currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                         diff = currentValue - initialValue;
                         if (diff < selectedNodeSwap.getValue()) {
-                            currentNodeSwap = new NodeSwap(currentNode, vehicleToInsertInto, diff, indexToInsert, true);
+                            currentNodeSwap = new NodeSwap(node, vehicleToInsertInto, diff, indexToInsert, true);
                             foundBetterValue = true;
                         }
                     }
@@ -302,17 +303,17 @@ public class Heuristics {
                     //beszuras a beszurt node moge
                     distanceBetweenNodesToInsert = data.getDistanceBetweenNode(nodeToInsert, nextNode);
 
-                    vehicleToInsertInto.getRoute().add(indexToInsert + 1, currentNode);
+                    vehicleToInsertInto.getRoute().add(indexToInsert + 1, node);
 
-                    distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(nodeToInsert, currentNode) + data.getDistanceBetweenNode(currentNode, nextNode);
+                    distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(nodeToInsert, node) + data.getDistanceBetweenNode(node, nextNode);
 
-                    validSolution = solver.checkForValidity(data, vehicleToInsertInto);
+                    valid = solver.checkForValidity(data, vehicleToInsertInto);
 
-                    if (validSolution) {
+                    if (valid) {
                         currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                         diff = currentValue - initialValue;
                         if ((diff < selectedNodeSwap.getValue() && currentNodeSwap == null) || (currentNodeSwap != null && diff < currentNodeSwap.getValue())) {
-                            currentNodeSwap = new NodeSwap(currentNode, vehicleToInsertInto, diff, indexToInsert, true);
+                            currentNodeSwap = new NodeSwap(node, vehicleToInsertInto, diff, indexToInsert, true);
                             foundBetterValue = true;
                         }
                     }
