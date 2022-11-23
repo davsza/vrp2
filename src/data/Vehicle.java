@@ -139,6 +139,9 @@ public class Vehicle {
     }
 
     public float calculateTravelDistance(Data data) {
+        if(penaltyVehicle) {
+            return 2 * data.getMaximumTravelDistance();
+        }
         // TODO: for loop
         //int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
         int customerNodeListSize = 0;

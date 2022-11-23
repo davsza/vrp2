@@ -165,6 +165,7 @@ public class Heuristics {
                 float worst = 0;
                 float bestDataValue = Float.MAX_VALUE;
                 for (NodeSwap nodeSwap : feasibleNodeSwaps) {
+                    // TODO: itt hal meg, indexbound
                     float bestValue = nodeSwap.getRegretNodeSwapList().get(0).getValue();//nodeSwap.getValues().get(0);
                     diff = nodeSwap.getRegretSum(leastFeasibleVehicleInsert);//nodeSwap.getValues().get(nodeSwap.getValues().size() - 1);
                     if (diff > worst) {
@@ -195,6 +196,7 @@ public class Heuristics {
                 }
             }
 
+            // TODO: itt hal meg, nullptr
             vehicleToInsertInto = bestNodeSwap.getRegretNodeSwapList().get(0).getVehicle();
             nodeToInsert = bestNodeSwap.getRegretNodeSwapList().get(0).getNode();
             indexToInsert = bestNodeSwap.getRegretNodeSwapList().get(0).getIndex();
@@ -357,7 +359,6 @@ public class Heuristics {
         boolean foundVehicleForInsert = false;
         NodeSwap currentNodeSwap = null, bestNodeSwap;
         Node nodeToInsert;
-        long totalNanoSecondsForValidityCheckInCurrentIteration = 0, startNano, endNano;
         long totalInsertValidityCheck = 0;
 
         for (Node nodesToInsert : nodesToSwap) {

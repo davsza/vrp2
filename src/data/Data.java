@@ -221,4 +221,16 @@ public class Data {
             }
         }
     }
+
+    public float getMaximumTravelDistance() {
+        float maxValue = 0;
+        for (Float[] floats : matrix) {
+            for (Float aFloat : floats) {
+                if (aFloat > maxValue) {
+                    maxValue = aFloat;
+                }
+            }
+        }
+        return maxValue;
+    }
 }

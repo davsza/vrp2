@@ -160,4 +160,8 @@ public class Node {
     public Float getServiceTime() {
         return serviceTime;
     }
+
+    public boolean customerNode() {
+        return !depot && !dumpingSite;
+    }
 }
