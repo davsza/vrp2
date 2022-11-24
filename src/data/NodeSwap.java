@@ -112,6 +112,9 @@ public class NodeSwap {
         float sum = 0;
         float bestValue = regretNodeSwapList.get(0).getValue();
         for(int i = 1; i < index; i++) {
+            if(regretNodeSwapList.get(i).getVehicle().isPenaltyVehicle()) {
+                continue;
+            }
             sum += regretNodeSwapList.get(i).getValue() - bestValue;
         }
         return sum;

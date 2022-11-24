@@ -23,7 +23,6 @@ public class Solver {
     }
 
     public void initGreedy(Data data, Logger logger) {
-
         LocalTime startGreedy = LocalTime.now();
         long startGreedyNano = System.nanoTime();
 
@@ -58,22 +57,8 @@ public class Solver {
         currentVehicle.getArrivalTimes().add((float) currentNode.getTimeStart());
 
         while (data.hasMoreUnvisitedNodes()) {
-            // TODO: ha valamelyik node nem fér be sehova, rakjuk penalty vehiclere
-            /*
-            if (currentVehicle.isPenaltyVehicle()) {
-                List<Node> notVisitedNodes = data.getNodeList().stream().filter(node -> !node.isVisited() && node.customerNode()).collect(Collectors.toList());
-                currentVehicle.getRoute().addAll(notVisitedNodes);
-            } else { // TODO: ebbe nem vagyok biztos, hogy ide kell az else ág, de hátha
-
-             */
             nextNode = data.findNextNode(currentVehicle, currentNode);
             if (!nextNode.isNullNode()) {
-                // TODO: 804es datasetnél az 568-as nodenál megáll a greedy valamiért
-                // TODO: 1351es datasetnél az 237-es nodenál megáll a greedy valamiért
-                System.out.println(nextNode.getId());
-                if (nextNode.getId().equals(568)) {
-                    System.out.println("");
-                }
                 currentTime = currentVehicle.getCurrentTime();
                 travelTime = data.getDistanceBetweenNode(currentNode, nextNode);
                 serviceTime = currentNode.getServiceTime();
@@ -123,8 +108,7 @@ public class Solver {
         currentVehicle.getRoute().add(dumpingSite);
         currentVehicle.getRoute().add(data.getDepotNode());
 
-
-        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() == 0).collect(Collectors.toList())) {
+        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() == 0 && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             Node depotNode = data.getDepotNode();
             Node dump = data.getNearestDumpingSiteNode(vehicle, depotNode);
             vehicle.getRoute().add(depotNode);
@@ -144,8 +128,6 @@ public class Solver {
 
         float travelDistance, sumTravelDistance = 0;
         int numberOfCustomers;
-
-        penaltyVehicle.setRoute(penaltyVehicle.getRoute().stream().filter(Node::customerNode).collect(Collectors.toList()));
 
         for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3 || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             travelDistance = vehicle.calculateTravelDistance(data);
@@ -208,9 +190,10 @@ public class Solver {
         int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit, noBetterSolutionFound = 0, customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4);
         String hashCode;
         StringBuilder currentVehicleRouteStringBuilder;
-        while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
+        while (numberOfSteps < 100 && noBetterSolutionFound < 2000) {
             long arrivalTimeUpdateTimeTotal = 0;
             logger.log("Iteration " + numberOfSteps);
+            System.out.println("Number of iterations without better solution: " + noBetterSolutionFound);
             iterationStart = System.nanoTime();
             System.out.println(numberOfSteps + " of " + data.getInfo());
             //System.out.println("Better solution hasn't been found in " + noBetterSolutionFound + " iteration");
@@ -312,7 +295,7 @@ public class Solver {
         float travelDistance, sumTravelDistance = 0;
         int numberOfCustomers;
 
-        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
+        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3 || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             travelDistance = vehicle.calculateTravelDistance(bestData);
             sumTravelDistance += travelDistance;
             numberOfCustomers = (int) vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
@@ -322,6 +305,8 @@ public class Solver {
         }
         logger.log("Total travel distance: " + sumTravelDistance);
         logger.emptyLine();
+
+        int customerNumber = 0;
 
         for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
             currentVehicleRouteStringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s route: ");
@@ -333,11 +318,14 @@ public class Solver {
                     str = "DS" + node.getId();
                 } else {
                     str = node.getId().toString();
+                    customerNumber++;
                 }
                 currentVehicleRouteStringBuilder.append(str).append(" ");
             }
             logger.log(currentVehicleRouteStringBuilder.toString());
         }
+
+        logger.log("Number of customers on all vehicles: " + customerNumber);
 
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());

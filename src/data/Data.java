@@ -123,7 +123,14 @@ public class Data {
         List<Node> feasibleNodes = nodeList.stream().filter(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited()).collect(Collectors.toList());
         for(Node node : feasibleNodes) {
             float travelDistance = getDistanceBetweenNode(currentNode, node);
-            if(travelDistance < distance
+            if(currentNode.isDepot()
+                    && currentNode.getTimeStart() + travelDistance <= node.getTimeEnd()
+                    && node.getTimeStart() <= currentNode.getTimeEnd() + travelDistance
+                    && capacityCheck(currentVehicle, node)
+                    && maximumNodesVisited(currentVehicle)) {
+                distance = travelDistance;
+                nextNode = node;
+            } else if(travelDistance < distance
                     && capacityCheck(currentVehicle, node)
                     && maximumNodesVisited(currentVehicle)
                     && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)

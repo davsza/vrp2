@@ -19,9 +19,6 @@ public class Heuristics {
     }
 
     public void repairNodes(Data data, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger) {
-        regretInsert(data, nodesToSwap, 2, logger);
-
-/*
         LocalTime startTime = LocalTime.now();
         long repairStart = System.nanoTime();
         logger.log("Repairing nodes started at: " + startTime);
@@ -61,7 +58,6 @@ public class Heuristics {
         long repairEnd = System.nanoTime();
         logger.log("Repairing nodes ended at: " + endTime + ", took " + ((repairEnd - repairStart) * 1e-9) + " seconds");
 
- */
     }
 
     private void regretInsert(Data data, List<Node> nodesToSwap, int p, Logger logger) {
@@ -70,21 +66,31 @@ public class Heuristics {
         long startNanoTime = System.nanoTime();
         logger.log("regretInsert_" + (p == 2 || p == 3 ? p : "k") + " started at: " + startTime);
 
-        List<NodeSwap>  nodeSwapList = new ArrayList<>();
-        float bestDiff, currentValue, diff, initialValue = solver.getDataValue(data);;
+        List<NodeSwap> nodeSwapList = new ArrayList<>();
+        float bestDiff, currentValue, diff, initialValue = solver.getDataValue(data);
         Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
         int indexToInsert = 0;
-        NodeSwap currentNodeSwap;
+        NodeSwap currentNodeSwap = null;
         Node nodeToInsert;
-        long totalInsertValidityCheck = 0;
+        long totalInsertValidityCheck = 0, startNano, endNano;
 
         for (Node nodesToInsert : nodesToSwap) {
             NodeSwap customerNodeSwap = new NodeSwap(nodesToInsert);
-            bestDiff = Float.MAX_VALUE;
             boolean checkedEmptyVehicle = false;
             for (Vehicle vehicle : data.getFleet()) {
-                if(vehicle.isPenaltyVehicle()) continue;
-                if (checkedEmptyVehicle) break;
+                bestDiff = Float.MAX_VALUE;
+                if (vehicle.isPenaltyVehicle()) {
+                    currentNodeSwap = new NodeSwap(nodesToInsert);
+                    diff = 2 * data.getMaximumTravelDistance();
+                    currentNodeSwap.setVehicle(vehicle);
+                    currentNodeSwap.setIndex(vehicle.getRoute().size() - 1);
+                    currentNodeSwap.setFoundVehicleForNodeToInsert(true);
+                    currentNodeSwap.setNode(nodesToInsert);
+                    currentNodeSwap.setValue(diff);
+                    customerNodeSwap.getRegretNodeSwapList().add(currentNodeSwap);
+                    continue;
+                }
+                if (checkedEmptyVehicle) continue;
                 checkedEmptyVehicle = vehicle.getRoute().size() == 3;
                 int vehicleRouteSize = vehicle.getRoute().size();
                 currentNodeSwap = new NodeSwap(nodesToInsert);
@@ -110,8 +116,10 @@ public class Heuristics {
                     vehicle.getRoute().add(i, nodesToInsert);
 
                     float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, nodesToInsert) + data.getDistanceBetweenNode(nodesToInsert, nextNode);
-
+                    startNano = System.nanoTime();
                     boolean valid = solver.checkForValidity(data, vehicle);
+                    endNano = System.nanoTime();
+                    totalInsertValidityCheck += (endNano - startNano);
 
                     if (valid) {
                         currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
@@ -128,17 +136,12 @@ public class Heuristics {
                     vehicle.getRoute().remove(nodesToInsert);
 
                 }
-                if(currentNodeSwap.getVehicle() != null) {
+                if (currentNodeSwap.getVehicle() != null) {
                     customerNodeSwap.getRegretNodeSwapList().add(currentNodeSwap);
                 }
             }
-            if(customerNodeSwap.getRegretNodeSwapList().size() != 0) {
-                customerNodeSwap.sortRegretList();
-                nodeSwapList.add(customerNodeSwap);
-            } else {
-                //put the node on the penalty vehicle if we can not insert anywhere
-                penaltyVehicle.getRoute().add(nodesToInsert);
-            }
+            customerNodeSwap.sortRegretList();
+            nodeSwapList.add(customerNodeSwap);
         }
 
         while (nodesToSwap.size() > 0) {
@@ -160,7 +163,7 @@ public class Heuristics {
             if (leastFeasibleVehicleInsert < p) {
                 List<NodeSwap> feasibleNodeSwaps = nodeSwapList
                         .stream()
-                        .filter(e -> e.getNumberOfFeasibleVehiclesToInsertInto() == leastFeasibleVehicleInsert)
+                        .filter(nodeSwap -> nodeSwap.getNumberOfFeasibleVehiclesToInsertInto() == leastFeasibleVehicleInsert)
                         .collect(Collectors.toList());
                 float worst = 0;
                 float bestDataValue = Float.MAX_VALUE;
@@ -212,17 +215,20 @@ public class Heuristics {
 
             initialValue += bestNodeSwap.getRegretNodeSwapList().get(0).getValue();
 
-            for(NodeSwap nodeSwap : nodeSwapList) {
+            for (NodeSwap nodeSwap : nodeSwapList) {
+
+                if(vehicleToInsertInto.isPenaltyVehicle()) {
+                    break;
+                }
 
                 Vehicle finalVehicleToInsertInto = vehicleToInsertInto;
-                // TODO: ide még a szűréshez hozzáadni a penaltyvehiclet?
                 // olyan nodeswapek, ahol a vehicle megyezik
                 List<NodeSwap> nodeSwapsWithSameVehicleList = nodeSwap.getRegretNodeSwapList()
                         .stream()
                         .filter(nodeSwap1 -> nodeSwap1.getVehicle().equals(finalVehicleToInsertInto))
                         .collect(Collectors.toList());
 
-                if(nodeSwapsWithSameVehicleList.size() == 0) continue;
+                if (nodeSwapsWithSameVehicleList.size() == 0) continue;
 
                 // TODO: ha több ilyen nodeswap is megvan, amelyik kocsija megegyezik, akkor mindegyikre vegig kell nezni nem? vagy miert csak az elso van kiveve
                 NodeSwap selectedNodeSwap = nodeSwapsWithSameVehicleList.get(0);
@@ -231,14 +237,13 @@ public class Heuristics {
                 boolean foundBetterValue = false;
                 currentNodeSwap = null;
 
-                if(selectedNodeSwap.getIndex() == indexToInsert) {
+                if (selectedNodeSwap.getIndex() == indexToInsert) {
                     bestDiff = Float.MAX_VALUE;
                     selectedNodeSwap.setFoundVehicleForNodeToInsert(false);
                     for (int i = 1; i < vehicleToInsertInto.getRoute().size() - 1; i++) {
 
                         float previousNodeArrivalTime = vehicleToInsertInto.getArrivalTimes().get(i - 1);
                         Node previousNode = vehicleToInsertInto.getRoute().get(i - 1);
-                        // TODO: i vagy i + 1 lesz a nextnode?
                         Node nextNode = vehicleToInsertInto.getRoute().get(i);
                         float serviceTimeAtPreviousNode = previousNode.getServiceTime();
                         float travelDistance = data.getDistanceBetweenNode(previousNode, node);
@@ -273,13 +278,12 @@ public class Heuristics {
                         vehicleToInsertInto.getRoute().remove(node);
                     }
 
-                    if(!selectedNodeSwap.isFoundVehicleForNodeToInsert()) {
-                        //TODO: ha ezzel a size 0 lesz, akkor buntetolistara a customert
+                    if (!selectedNodeSwap.isFoundVehicleForNodeToInsert()) {
                         nodeSwap.getRegretNodeSwapList().remove(selectedNodeSwap);
                     }
 
                 } else {
-                    // TODO: selected.getvalue-nál jobb e ha az i-1,i vagy i,i+1 koze inserteljuk
+                    //selected.getvalue-nál jobb e ha az i-1,i vagy i,i+1 koze inserteljuk
                     Node previousNode = vehicleToInsertInto.getRoute().get(indexToInsert - 1);
                     Node nextNode = vehicleToInsertInto.getRoute().get(indexToInsert + 1);
 
@@ -331,7 +335,7 @@ public class Heuristics {
                         selectedNodeSwap.setIndex(selectedNodeSwap.getIndex() + 1);
                     }
                 }
-
+                nodeSwap.sortRegretList();
             }
 
             LocalTime insertEndTime = LocalTime.now();
@@ -356,60 +360,55 @@ public class Heuristics {
         float bestDiff, currentValue, diff, initialValue = solver.getDataValue(data);
         Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
         int indexToInsert = 0;
-        boolean foundVehicleForInsert = false;
         NodeSwap currentNodeSwap = null, bestNodeSwap;
         Node nodeToInsert;
-        long totalInsertValidityCheck = 0;
+        long totalInsertValidityCheck = 0, endNano, startNano;
 
         for (Node nodesToInsert : nodesToSwap) {
-
             bestDiff = Float.MAX_VALUE;
-
             boolean checkedEmptyVehicle = false;
-
             for (Vehicle vehicle : data.getFleet()) {
-
-                if(vehicle.isPenaltyVehicle()) continue;
-
-                if (checkedEmptyVehicle) break;
+                //TODO:
+                if (vehicle.isPenaltyVehicle()) {
+                    diff = 2 * data.getMaximumTravelDistance();
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        currentNodeSwap = new NodeSwap(nodesToInsert, vehicle, diff, vehicle.getRoute().size() - 1, true);
+                    }
+                    continue;
+                }
+                if (checkedEmptyVehicle) continue;
                 checkedEmptyVehicle = vehicle.getRoute().size() == 3;
-
                 for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
-
                     float previousNodeArrivalTime = vehicle.getArrivalTimes().get(i - 1);
                     Node previousNode = vehicle.getRoute().get(i - 1);
                     Node nextNode = vehicle.getRoute().get(i);
                     float serviceTimeAtPreviousNode = previousNode.getServiceTime();
                     float travelDistance = data.getDistanceBetweenNode(previousNode, nodesToInsert);
                     float arrivalTimeAtNode = previousNodeArrivalTime + serviceTimeAtPreviousNode + travelDistance;
-
                     if (arrivalTimeAtNode > nodesToInsert.getTimeEnd()) {
                         break;
                     }
-
                     if (nodesToInsert.getTimeStart() > nextNode.getTimeEnd()) {
                         continue;
                     }
-
                     float distanceBetweenNodesToInsert = data.getDistanceBetweenNode(previousNode, nextNode);
-
                     vehicle.getRoute().add(i, nodesToInsert);
-
                     float distanceBetweenNodesAfterInsert = data.getDistanceBetweenNode(previousNode, nodesToInsert) + data.getDistanceBetweenNode(nodesToInsert, nextNode);
+                    startNano = System.nanoTime();
 
                     boolean validSolution = solver.checkForValidity(data, vehicle);
-
+                    endNano = System.nanoTime();
+                    totalInsertValidityCheck += (endNano - startNano);
                     if (validSolution) {
                         currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                         diff = currentValue - initialValue;
-                        if(diff < bestDiff) {
+                        if (diff < bestDiff) {
                             bestDiff = diff;
                             currentNodeSwap = new NodeSwap(nodesToInsert, vehicle, diff, i, true);
                         }
                     }
-
                     vehicle.getRoute().remove(i);
-
                 }
             }
             nodeSwapList.add(currentNodeSwap);
@@ -444,12 +443,13 @@ public class Heuristics {
 
             initialValue += bestNodeSwap.getValue();
 
-            for(NodeSwap nodeSwap : nodeSwapList) {
+            for (NodeSwap nodeSwap : nodeSwapList) {
+                // TODO: penalty vehiclere valo beszurasnal senkit nem kell updatelni, skip
+                if(vehicleToInsertInto.isPenaltyVehicle()) {
+                    break;
+                }
                 boolean foundBetterValue = false;
-                // TODO: nodeswapra kiszamolni beszuras helyen a ket uj diffet, i-1;i es i;i+1 koze, ha valamelyik ertek
-                // TODO: kisebb lesz, erteket felulirom, vehiclet felulirom
-                // TODO: if nodeswap vehicleje == bestnodeswap vehiclje es idx == bestidx, akkor egeszet ujrakell ezzel kezdeni
-                if(nodeSwap.getIndex() == indexToInsert && nodeSwap.getVehicle().equals(vehicleToInsertInto)) {
+                if (nodeSwap.getIndex() == indexToInsert && nodeSwap.getVehicle().equals(vehicleToInsertInto)) {
 
                     Node node = nodeSwap.getNode();
                     bestDiff = Float.MAX_VALUE;
@@ -457,9 +457,17 @@ public class Heuristics {
 
                     for (Vehicle vehicle : data.getFleet()) {
 
-                        if(vehicle.isPenaltyVehicle()) continue;
+                        //TODO:
+                        if (vehicle.isPenaltyVehicle()) {
+                            diff = 2 * data.getMaximumTravelDistance();
+                            if (diff < bestDiff) {
+                                bestDiff = diff;
+                                currentNodeSwap = new NodeSwap(node, vehicle, diff, vehicle.getRoute().size() - 1, true);
+                            }
+                            continue;
+                        }
 
-                        if (checkedEmptyVehicle) break;
+                        if (checkedEmptyVehicle) continue;
                         checkedEmptyVehicle = vehicle.getRoute().size() == 3;
 
                         for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
@@ -490,7 +498,7 @@ public class Heuristics {
                             if (validSolution) {
                                 currentValue = initialValue - distanceBetweenNodesToInsert + distanceBetweenNodesAfterInsert;
                                 diff = currentValue - initialValue;
-                                if(diff < bestDiff) {
+                                if (diff < bestDiff) {
                                     bestDiff = diff;
                                     currentNodeSwap = new NodeSwap(node, vehicle, diff, i, true);
                                 }
@@ -576,8 +584,7 @@ public class Heuristics {
     }
 
     public void destroyNodes(Data data, int p, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger) {
-        worstRemoval(data, p, nodesToSwap, CONSTANTS.getP_WORST(), logger);
-/*
+        //TODO: check penaltyvehicle removal in random and relatedremoval
         LocalTime startTime = LocalTime.now();
         long destroyStart = System.nanoTime();
         logger.log("Destroying nodes started at: " + startTime);
@@ -621,8 +628,6 @@ public class Heuristics {
         LocalTime endTime = LocalTime.now();
         long destroyEnd = System.nanoTime();
         logger.log("Destroying nodes ended at: " + endTime + ", took " + ((destroyEnd - destroyStart) * 1e-9) + " seconds");
-
- */
 
     }
 
@@ -733,33 +738,42 @@ public class Heuristics {
 
         //minden kocsi minden customer nodejara kiszamoljuk, hogy ha kivennenk, mennyi lenne az erteke
         for (Vehicle vehicle : data.getFleet()) {
-            if(vehicle.getRoute().size() < 4) {
+            if (vehicle.getRoute().size() < 4 || vehicle.isPenaltyVehicle()) {
                 continue;
             }
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);
                 currentNodeSwap = new NodeSwap();
                 if (!node.isDepot() && !node.isDumpingSite()) {
+                    if(vehicle.isPenaltyVehicle()) {
+                        currentValue = initialValue - 2 * data.getMaximumTravelDistance();
+                        currentNodeSwap.setNode(node);
+                        currentNodeSwap.setValue(currentValue);
+                        currentNodeSwap.setIndex(i);
+                        currentNodeSwap.setVehicle(vehicle);
 
-                    Node previousNode = vehicle.getRoute().get(i - 1);
-                    Node nextNode = vehicle.getRoute().get(i + 1);
+                        nodeSwapList.add(currentNodeSwap);
+                    } else {
+                        Node previousNode = vehicle.getRoute().get(i - 1);
+                        Node nextNode = vehicle.getRoute().get(i + 1);
 
-                    float distanceBetweenNodesBeforeRemoval = data.getDistanceBetweenNode(previousNode, node) + data.getDistanceBetweenNode(node, nextNode);
+                        float distanceBetweenNodesBeforeRemoval = data.getDistanceBetweenNode(previousNode, node) + data.getDistanceBetweenNode(node, nextNode);
 
-                    vehicle.getRoute().remove(node);
+                        vehicle.getRoute().remove(node);
 
-                    float distanceBetweenNodesAfterRemoval = data.getDistanceBetweenNode(previousNode, nextNode);
+                        float distanceBetweenNodesAfterRemoval = data.getDistanceBetweenNode(previousNode, nextNode);
 
-                    currentValue = initialValue - distanceBetweenNodesBeforeRemoval + distanceBetweenNodesAfterRemoval;
+                        currentValue = initialValue - distanceBetweenNodesBeforeRemoval + distanceBetweenNodesAfterRemoval;
 
-                    currentNodeSwap.setNode(node);
-                    currentNodeSwap.setValue(currentValue);
-                    currentNodeSwap.setIndex(i);
-                    currentNodeSwap.setVehicle(vehicle);
+                        currentNodeSwap.setNode(node);
+                        currentNodeSwap.setValue(currentValue);
+                        currentNodeSwap.setIndex(i);
+                        currentNodeSwap.setVehicle(vehicle);
 
-                    nodeSwapList.add(currentNodeSwap);
+                        nodeSwapList.add(currentNodeSwap);
 
-                    vehicle.getRoute().add(i, node);
+                        vehicle.getRoute().add(i, node);
+                    }
                 }
             }
         }
@@ -790,8 +804,8 @@ public class Heuristics {
 
             //removal a kivett node elott
             Node previousNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1);
-            if(!previousNode.isDepot() && !previousNode.isDumpingSite() /*&& indexToRemoveFrom != vehicleToRemoveFrom.getRoute().size() - 2*/) {
-                if(indexToRemoveFrom - 2 == -1 || indexToRemoveFrom == vehicleToRemoveFrom.getRoute().size()) {
+            if (!previousNode.isDepot() && !previousNode.isDumpingSite() /*&& indexToRemoveFrom != vehicleToRemoveFrom.getRoute().size() - 2*/) {
+                if (indexToRemoveFrom - 2 == -1 || indexToRemoveFrom == vehicleToRemoveFrom.getRoute().size()) {
                     System.out.println("hujuj " + previousNode.isDepot());
                 }
 
@@ -799,8 +813,8 @@ public class Heuristics {
                 float distanceAfterRemoval_ = data.getDistanceBetweenNode(previousNode, vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom));
                 currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
 
-                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int)previousNode.getId()).findFirst().get();
-                if(currentValue > currentNodeSwap.getValue()) {
+                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) previousNode.getId()).findFirst().get();
+                if (currentValue > currentNodeSwap.getValue()) {
                     currentNodeSwap.setValue(currentValue);
                     currentNodeSwap.setVehicle(vehicleToRemoveFrom);
                     currentNodeSwap.setIndex(indexToRemoveFrom - 1);
@@ -808,21 +822,21 @@ public class Heuristics {
 
             }
 
-            for(NodeSwap nodeSwap : nodeSwapList) {
-                if(nodeSwap.getVehicle().equals(vehicleToRemoveFrom) && nodeSwap.getIndex() > indexToRemoveFrom) {
+            for (NodeSwap nodeSwap : nodeSwapList) {
+                if (nodeSwap.getVehicle().equals(vehicleToRemoveFrom) && nodeSwap.getIndex() > indexToRemoveFrom) {
                     nodeSwap.setIndex(nodeSwap.getIndex() - 1);
                 }
             }
 
             //removal a kivett node utan
             Node nextNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom);
-            if(!nextNode.isDepot() && !nextNode.isDumpingSite()/* && indexToRemoveFrom != 1*/) {
+            if (!nextNode.isDepot() && !nextNode.isDumpingSite()/* && indexToRemoveFrom != 1*/) {
                 float distanceBeforeRemoval_ = data.getDistanceBetweenNode(nodeToRemove, nextNode);
                 float distanceAfterRemoval_ = data.getDistanceBetweenNode(vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1), nextNode);
                 currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
 
-                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int)nextNode.getId()).findFirst().get();
-                if(currentValue > currentNodeSwap.getValue()) {
+                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) nextNode.getId()).findFirst().get();
+                if (currentValue > currentNodeSwap.getValue()) {
                     currentNodeSwap.setValue(currentValue);
                     currentNodeSwap.setVehicle(vehicleToRemoveFrom);
                     currentNodeSwap.setIndex(indexToRemoveFrom);
@@ -912,7 +926,6 @@ public class Heuristics {
             int startingIndex = nodeSwapList.indexOf(nodeSwap) == 0 ? 1 : nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) - 1).getIndex();
             float overallQuantity = 0;
             for (int i = startingIndex; i < nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) + 1).getIndex(); i++) {
-                //TODO: itt hal meg (?)
                 Node node = vehicle.getRoute().get(i);
                 if (!node.isDumpingSite()) {
                     overallQuantity += node.getQuantity();
@@ -989,7 +1002,6 @@ public class Heuristics {
             travelDistance = data.getDistanceBetweenNode(previousNode, disposalSiteToSwapWith);
             arrivalTimeAtDisposalSite = arrivalTimeAtPreviousNode + serviceTime + travelDistance;
             if (arrivalTimeAtDisposalSite <= disposalTimeEnd) {
-                //TODO: itt hal meg (?)
                 vehicle.getArrivalTimes().set(dumpingSiteIndex, Math.max(arrivalTimeAtDisposalSite, disposalSiteToSwapWith.getTimeStart()));
                 solver.updateArrivalTimes(data);
                 break;
