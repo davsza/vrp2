@@ -45,10 +45,6 @@ public class Node {
         return relatednessValue;
     }
 
-    public void setRelatednessValue(Float relatednessValue) {
-        this.relatednessValue = relatednessValue;
-    }
-
     public Boolean getVisited() {
         return visited;
     }

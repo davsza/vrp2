@@ -58,18 +58,6 @@ public class Data {
         return dumpingSites;
     }
 
-    public void setDumpingSites(List<Integer> dumpingSites) {
-        this.dumpingSites = dumpingSites;
-    }
-
-    public void setNodeList(List<Node> nodeList) {
-        this.nodeList = nodeList;
-    }
-
-    public void setFleet(List<Vehicle> fleet) {
-        this.fleet = fleet;
-    }
-
     public String getInfo() {
         return info;
     }
@@ -93,7 +81,6 @@ public class Data {
 
     public Node getNodeOnIndex(int idx) { return this.nodeList.get(idx); }
 
-    public int getMatrixRowCount() { return this.matrix.length; }
 
     public void setMatrix(Float[][] matrix) {
         this.matrix = matrix;

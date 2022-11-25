@@ -19,14 +19,13 @@ public class Main {
 
         Solver solver = new Solver(dataList);
         Logger logger;
-        for(Data data : dataList) {
+        for (Data data : dataList) {
             logger = new Logger();
-            logger.setPath("C:\\Users\\david\\Documents\\Szakdoga\\results\\" + data.getInfo() + ".txt");
+            logger.setPath("C:\\Users\\david\\Documents\\Szakdoga\\results\\" + data.getInfo() +".txt");
             solver.initGreedy(data, logger);
             solver.ALNS(data, logger);
             logger.writeFile();
         }
-        System.out.println("");
     }
 
 }

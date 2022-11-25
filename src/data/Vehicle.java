@@ -12,7 +12,6 @@ public class Vehicle {
     private Integer maximumNumberOfStopsToVisit;
     private List<Node> route;
     private Float currentTime;
-
     private Integer maximumCapacity;
     private Integer id;
     private Boolean penaltyVehicle;
@@ -30,7 +29,7 @@ public class Vehicle {
         this.capacity = vehicle.getCapacity();
         this.maximumNumberOfStopsToVisit = vehicle.getMaximumNumberOfStopsToVisit();
         this.route = new ArrayList<>();
-        for(Node node : vehicle.getRoute()) {
+        for (Node node : vehicle.getRoute()) {
             Node copiedNode = new Node(node);
             this.route.add(copiedNode);
         }
@@ -39,17 +38,13 @@ public class Vehicle {
         this.id = vehicle.getId();
         this.penaltyVehicle = vehicle.isPenaltyVehicle();
         this.arrivalTimes = new ArrayList<>();
-        for(Float arrivalTime : vehicle.getArrivalTimes()) {
+        for (Float arrivalTime : vehicle.getArrivalTimes()) {
             this.arrivalTimes.add(arrivalTime.floatValue());
         }
     }
 
     public List<Float> getArrivalTimes() {
         return arrivalTimes;
-    }
-
-    public void setArrivalTimes(List<Float> arrivalTimes) {
-        this.arrivalTimes = arrivalTimes;
     }
 
     public List<Node> getRoute() {
@@ -108,9 +103,6 @@ public class Vehicle {
         return capacity;
     }
 
-    public void setRoute(List<Node> route) {
-        this.route = route;
-    }
 
     public Integer getMaximumNumberOfStopsToVisit() {
         return maximumNumberOfStopsToVisit;
@@ -134,41 +126,32 @@ public class Vehicle {
 
     public void initVehicle() {
         setCurrentTime((float) 0);
-        setCapacity((float)0);
+        setCapacity((float) 0);
         setPenaltyVehicle(false);
     }
 
     public float calculateTravelDistance(Data data) {
-        if(penaltyVehicle) {
+        if (penaltyVehicle) {
             return (2 * data.getMaximumTravelDistance()) * route.size();
         }
         // TODO: for loop
         //int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
         int customerNodeListSize = 0;
-        for(Node node : route) if(!node.isDepot() && !node.isDumpingSite()) customerNodeListSize++;
-        if(customerNodeListSize == 0) {
+        for (Node node : route) if (!node.isDepot() && !node.isDumpingSite()) customerNodeListSize++;
+        if (customerNodeListSize == 0) {
             return 0;
         }
         float travelDistance = 0;
-        for(int i = 1; i < route.size(); i++) {
+        for (int i = 1; i < route.size(); i++) {
             float travelDistanceBetweenNodes = data.getDistanceBetweenNode(route.get(i - 1), route.get(i));
             travelDistance += travelDistanceBetweenNodes;
         }
         return travelDistance;
     }
 
-    public List<Node> copyRoute() {
-        List<Node> route = new ArrayList<>();
-        for(Node node : getRoute()) {
-            Node copiedNode = new Node(node);
-            route.add(copiedNode);
-        }
-        return route;
-    }
-
     public String routeHash() {
         StringBuilder stringBuilder = new StringBuilder();
-        for(Node node : route) {
+        for (Node node : route) {
             String hash = Integer.toHexString(node.getId());
             stringBuilder.append(hash);
         }

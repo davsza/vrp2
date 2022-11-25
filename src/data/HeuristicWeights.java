@@ -12,8 +12,18 @@ public class HeuristicWeights {
     private float regret_2_InsertWeight;
     private float regret_3_InsertWeight;
     private float regret_K_InsertWeight;
-    private int currentRemove; // 1: randomRemove; 2: worstRemove; 3: relatedRemove; 4: deleteDisposal; 5: swapDisposal; 6: insertDisposal
-    private int currentInsert; // 1: greedyInsert; 2: regret_2_Insert; 3: regret_3_Insert; 4: regret_K_InsertWeight
+    private int currentRemove;
+    // 1: randomRemove;
+    // 2: worstRemove;
+    // 3: relatedRemove;
+    // 4: deleteDisposal;
+    // 5: swapDisposal;
+    // 6: insertDisposal
+    private int currentInsert;
+    // 1: greedyInsert;
+    // 2: regret_2_Insert;
+    // 3: regret_3_Insert;
+    // 4: regret_K_InsertWeight
 
     private int timesUsedRandomRemove;
     private int timesUsedWorstRemove;
@@ -71,12 +81,47 @@ public class HeuristicWeights {
         this.regret_K_InsertScore = 0;
     }
 
+    public HeuristicWeights(HeuristicWeights heuristicWeights) {
+        this.randomRemovalWeight = heuristicWeights.getRandomRemovalWeight();
+        this.worstRemovalWeight = heuristicWeights.getWorstRemovalWeight();
+        this.relatedRemovalWeight = heuristicWeights.getRelatedRemovalWeight();
+        this.deleteDisposalWeight = heuristicWeights.getDeleteDisposalWeight();
+        this.swapDisposalWeight = heuristicWeights.getSwapDisposalWeight();
+        this.insertDisposalWeight = heuristicWeights.getInsertDisposalWeight();
+        this.greedyInsertWeight = heuristicWeights.getGreedyInsertWeight();
+        this.regret_2_InsertWeight = heuristicWeights.getRegret_2_InsertWeight();
+        this.regret_3_InsertWeight = heuristicWeights.getRegret_3_InsertWeight();
+        this.regret_K_InsertWeight = heuristicWeights.getRegret_K_InsertWeight();
+        this.currentRemove = heuristicWeights.getCurrentRemove();
+        this.currentInsert = heuristicWeights.getCurrentInsert();
+        this.timesUsedRandomRemove = heuristicWeights.getTimesUsedRandomRemove();
+        this.timesUsedWorstRemove = heuristicWeights.getTimesUsedWorstRemove();
+        this.timesUsedRelatedRemove = heuristicWeights.getTimesUsedRelatedRemove();
+        this.timesUsedDeleteDisposal = heuristicWeights.getTimesUsedDeleteDisposal();
+        this.timesUsedSwapDisposal = heuristicWeights.getTimesUsedSwapDisposal();
+        this.timesUsedInsertDisposal = heuristicWeights.getTimesUsedInsertDisposal();
+        this.timesUsedGreedyInsert = heuristicWeights.getTimesUsedGreedyInsert();
+        this.timesUsedRegret_2_Insert = heuristicWeights.getTimesUsedRegret_2_Insert();
+        this.timesUsedRegret_3_Insert = heuristicWeights.getTimesUsedRegret_3_Insert();
+        this.timesUsedRegret_K_Insert = heuristicWeights.getTimesUsedRegret_K_Insert();
+        this.randomRemovalScore = heuristicWeights.getRandomRemovalScore();
+        this.worstRemovalScore = heuristicWeights.getWorstRemovalScore();
+        this.relatedRemovalScore = heuristicWeights.getRelatedRemovalScore();
+        this.deleteDisposalScore = heuristicWeights.getDeleteDisposalScore();
+        this.swapDisposalScore = heuristicWeights.getSwapDisposalScore();
+        this.insertDisposalScore = heuristicWeights.getInsertDisposalScore();
+        this.greedyInsertScore = heuristicWeights.getGreedyInsertScore();
+        this.regret_2_InsertScore = heuristicWeights.getRegret_2_InsertScore();
+        this.regret_3_InsertScore = heuristicWeights.getRegret_3_InsertScore();
+        this.regret_K_InsertScore = heuristicWeights.getRegret_K_InsertScore();
+    }
+
     public float sumOfRepair() {
         return getGreedyInsertWeight() + getRegret_2_InsertWeight() + getRegret_3_InsertWeight() + getRegret_K_InsertWeight();
     }
 
     public float sumOfDestroy() {
-        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight() + getSwapDisposalWeight();// + getInsertDisposalWeight();
+        return getRandomRemovalWeight() + getWorstRemovalWeight() + getRelatedRemovalWeight() + getDeleteDisposalWeight() + getSwapDisposalWeight() + getInsertDisposalWeight();
     }
 
     public float getRandomRemovalWeight() {
