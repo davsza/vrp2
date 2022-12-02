@@ -33,22 +33,18 @@ public class Heuristics {
         if (randomValue < greedyWeight) {
             heuristicWeights.setCurrentInsert(1);
             logger.log("Insert method: greedyInsert");
-            //System.out.println("Insert method: greedyInsert");
             greedyInsert(data, nodesToSwap, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight) {
             heuristicWeights.setCurrentInsert(2);
             logger.log("Insert method: regretInsert_2");
-            //System.out.println("Insert method: regretInsert_2");
             regretInsert(data, nodesToSwap, 2, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight) {
             heuristicWeights.setCurrentInsert(3);
             logger.log("Insert method: regretInsert_3");
-            //System.out.println("Insert method: regretInsert_3");
             regretInsert(data, nodesToSwap, 3, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight + regret_K_Weight) {
             heuristicWeights.setCurrentInsert(4);
             logger.log("Insert method: regretInsert_k");
-            //System.out.println("Insert method: regretInsert_k");
             // TODO: for loop
             int customerNodeCount = (int) data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
             regretInsert(data, nodesToSwap, customerNodeCount, logger);
@@ -66,13 +62,26 @@ public class Heuristics {
         long startNanoTime = System.nanoTime();
         logger.log("regretInsert_" + (p == 2 || p == 3 ? p : "k") + " started at: " + startTime);
 
-        List<NodeSwap> nodeSwapList = new ArrayList<>();
-        float bestDiff, currentValue, diff, initialValue = solver.getDataValue(data);
-        Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
-        int indexToInsert = 0;
-        NodeSwap currentNodeSwap = null;
-        Node nodeToInsert;
-        long totalInsertValidityCheck = 0, startNano, endNano;
+        float
+                bestDiff,
+                currentValue,
+                diff,
+                initialValue = solver.getDataValue(data);
+        int
+                indexToInsert;
+        long
+                totalInsertValidityCheck = 0,
+                startNano,
+                endNano;
+        List<NodeSwap>
+                nodeSwapList = new ArrayList<>();
+        Node
+                nodeToInsert;
+        NodeSwap
+                currentNodeSwap;
+        Vehicle
+                vehicleToInsertInto,
+                penaltyVehicle = data.getPenaltyVehicle();
 
         for (Node nodesToInsert : nodesToSwap) {
             NodeSwap customerNodeSwap = new NodeSwap(nodesToInsert);
@@ -83,7 +92,7 @@ public class Heuristics {
                     currentNodeSwap = new NodeSwap(nodesToInsert);
                     diff = 2 * data.getMaximumTravelDistance();
                     currentNodeSwap.setVehicle(vehicle);
-                    currentNodeSwap.setIndex(vehicle.getRoute().size() - 1);
+                    currentNodeSwap.setIndex(vehicle.getRoute().size());
                     currentNodeSwap.setFoundVehicleForNodeToInsert(true);
                     currentNodeSwap.setNode(nodesToInsert);
                     currentNodeSwap.setValue(diff);
@@ -145,10 +154,6 @@ public class Heuristics {
         }
 
         while (nodesToSwap.size() > 0) {
-
-            LocalTime insertStartTime = LocalTime.now();
-            long insertStartNanoTime = System.nanoTime();
-            //logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + insertStartTime);
 
             nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
@@ -330,39 +335,48 @@ public class Heuristics {
                         selectedNodeSwap.setVehicle(currentNodeSwap.getVehicle());
                         selectedNodeSwap.setValue(currentNodeSwap.getValue());
                         selectedNodeSwap.setIndex(currentNodeSwap.getIndex());
-                        currentNodeSwap = null;
                     } else if (selectedNodeSwap.getIndex() > indexToInsert) {
                         selectedNodeSwap.setIndex(selectedNodeSwap.getIndex() + 1);
                     }
                 }
                 nodeSwap.sortRegretList();
             }
-
-            LocalTime insertEndTime = LocalTime.now();
-            long insertEndNanoTime = System.nanoTime();
-            //logger.log("Node insert ended at: " + insertEndTime + ", took " + ((insertEndNanoTime - insertStartNanoTime) * 1e-9) + " seconds, " +
-            //        "validating data took " + (totalNanoSecondsForValidityCheckInCurrentIteration * 1e-9) + " seconds");
-
         }
+
         LocalTime endTime = LocalTime.now();
         long endNanoTime = System.nanoTime();
         logger.log("regretInsert ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
         logger.log("Validating the data took " + (totalInsertValidityCheck * 1e-9) + " seconds");
+
     }
 
     private void greedyInsert(Data data, List<Node> nodesToSwap, Logger logger) {
 
         LocalTime startTime = LocalTime.now();
-        long startNanoTime = System.nanoTime();
         logger.log("greedyInsert started at: " + startTime);
+        long startNanoTime = System.nanoTime();
 
-        List<NodeSwap> nodeSwapList = new ArrayList<>();
-        float bestDiff, currentValue, diff, initialValue = solver.getDataValue(data);
-        Vehicle vehicleToInsertInto = null, penaltyVehicle = data.getPenaltyVehicle();
-        int indexToInsert = 0;
-        NodeSwap currentNodeSwap = null, bestNodeSwap;
-        Node nodeToInsert;
-        long totalInsertValidityCheck = 0, endNano, startNano;
+        float
+                bestDiff,
+                currentValue,
+                diff,
+                initialValue = solver.getDataValue(data);
+        int
+                indexToInsert;
+        long
+                totalInsertValidityCheck = 0,
+                endNano,
+                startNano;
+        List<NodeSwap>
+                nodeSwapList = new ArrayList<>();
+        Node
+                nodeToInsert;
+        NodeSwap
+                currentNodeSwap = null,
+                bestNodeSwap;
+        Vehicle
+                vehicleToInsertInto,
+                penaltyVehicle = data.getPenaltyVehicle();
 
         for (Node nodesToInsert : nodesToSwap) {
             bestDiff = Float.MAX_VALUE;
@@ -416,10 +430,6 @@ public class Heuristics {
 
         while (nodesToSwap.size() > 0) {
 
-            LocalTime insertStartTime = LocalTime.now();
-            long insertStartNanoTime = System.nanoTime();
-            //logger.log((nodesToSwap.size() + 1) + "node to insert left, started at: " + insertStartTime);
-
             nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
                 public int compare(NodeSwap o1, NodeSwap o2) {
@@ -462,7 +472,7 @@ public class Heuristics {
                             diff = 2 * data.getMaximumTravelDistance();
                             if (diff < bestDiff) {
                                 bestDiff = diff;
-                                currentNodeSwap = new NodeSwap(node, vehicle, diff, vehicle.getRoute().size() - 1, true);
+                                currentNodeSwap = new NodeSwap(node, vehicle, diff, vehicle.getRoute().size(), true);
                             }
                             continue;
                         }
@@ -570,21 +580,16 @@ public class Heuristics {
                 }
 
             }
-
-            LocalTime insertEndTime = LocalTime.now();
-            long insertEndNanoTime = System.nanoTime();
-            //logger.log("Node insert ended at: " + insertEndTime + ", took " + ((insertEndNanoTime - insertStartNanoTime) * 1e-9) + " seconds, " +
-            //        "validating data took " + (totalNanoSecondsForValidityCheckInCurrentIteration * 1e-9) + " seconds");
         }
 
         LocalTime endTime = LocalTime.now();
         long endNanoTime = System.nanoTime();
         logger.log("greedyInsert ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
         logger.log("Validating the data took " + (totalInsertValidityCheck * 1e-9) + " seconds");
+
     }
 
     public void destroyNodes(Data data, int p, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger) {
-        //TODO: check penaltyvehicle removal in random and relatedremoval
         LocalTime startTime = LocalTime.now();
         long destroyStart = System.nanoTime();
         logger.log("Destroying nodes started at: " + startTime);
@@ -620,7 +625,7 @@ public class Heuristics {
             logger.log("Destroy method: swapDisposal");
             swapDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight + insertWeight) {
-            heuristicWeights.setCurrentRemove(5);
+            heuristicWeights.setCurrentRemove(6);
             logger.log("Destroy method: insertDisposal");
             insertDisposal(data, nodesToSwap, logger);
         }
@@ -633,25 +638,29 @@ public class Heuristics {
 
     private void relatedRemoval(Data data, int p, List<Node> nodesToSwap,
                                 float phi, float chi, float psi, int P, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
         logger.log("relatedRemoval started at: " + startTime);
+        long startNanoTime = System.nanoTime();
 
         randomRemoval(data, 1, nodesToSwap, logger);
+
         int randomIndex;
         List<NodeSwap> nodeSwapList;
         NodeSwap bestNodeSwap, currentNodeSwap;
+
         while (nodesToSwap.size() < p) {
-            LocalTime removeStartTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal started at: " + removeStartTime);
             nodeSwapList = new ArrayList<>();
             randomIndex = nodesToSwap.size() == 0 ? 0 : random.nextInt(nodesToSwap.size());
             Node nodeToCompare = nodesToSwap.get(randomIndex);
             data.calculateVisitingTime();
+
             // TODO: for loop
             //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
             List<Vehicle> feasibleVehicles = new ArrayList<>();
             for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
             for (Vehicle vehicle : feasibleVehicles) {
+                // TODO: for loop
                 //List<Node> feasibleNodes = vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
                 List<Node> feasibleNodes = new ArrayList<>();
                 for (Node node : vehicle.getRoute())
@@ -682,23 +691,26 @@ public class Heuristics {
             bestNodeSwap = nodeSwapList.get(index);
             nodesToSwap.add(bestNodeSwap.getNode());
             bestNodeSwap.getVehicle().getRoute().remove(bestNodeSwap.getNode());
-
-            LocalTime removeEndTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds");
         }
+
         LocalTime endTime = LocalTime.now();
-        logger.log("relatedRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("relatedRemoval ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
     private void randomRemoval(Data data, int p, List<Node> nodesToSwap, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
         logger.log("randomRemoval started at: " + startTime);
-        List<Node> feasibleNodesToRemove = new ArrayList<>();
-        int numberOfFeasibleNodesToRemove, index;
+        long startNanoTime = System.nanoTime();
+
         boolean found;
+        int numberOfFeasibleNodesToRemove, index;
+        List<Node> feasibleNodesToRemove = new ArrayList<>();
+
         while (nodesToSwap.size() < p) {
-            LocalTime removeStartTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal started at: " + removeStartTime);
+
             // TODO: for loop
             //feasibleNodesToRemove = data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
             for (Node node : data.getNodeList())
@@ -719,22 +731,26 @@ public class Heuristics {
                 }
                 if (found) break;
             }
-            LocalTime removeEndTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds");
         }
+
         LocalTime endTime = LocalTime.now();
-        logger.log("randomRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("randomRemoval ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
     private void worstRemoval(Data data, int p, List<Node> nodesToSwap, int p_worst, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
         logger.log("worstRemoval started at: " + startTime);
-        float currentValue, initialValue = solver.getDataValue(data), diff, value;
-        NodeSwap bestNodeSwap, currentNodeSwap = null;
-        List<NodeSwap> nodeSwapList = new ArrayList<>();
-        Vehicle vehicleToRemoveFrom;
-        Node nodeToRemove;
+        long startNanoTime = System.nanoTime();
+
+        float currentValue, initialValue = solver.getDataValue(data);
         int indexToRemoveFrom;
+        List<NodeSwap> nodeSwapList = new ArrayList<>();
+        Node nodeToRemove;
+        NodeSwap bestNodeSwap, currentNodeSwap;
+        Vehicle vehicleToRemoveFrom;
 
         //minden kocsi minden customer nodejara kiszamoljuk, hogy ha kivennenk, mennyi lenne az erteke
         for (Vehicle vehicle : data.getFleet()) {
@@ -779,10 +795,6 @@ public class Heuristics {
         }
 
         while (nodesToSwap.size() < p) {
-            LocalTime removeStartTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal started at: " + removeStartTime);
-
-            boolean foundBetterValue = false;
 
             nodeSwapList.sort(new Comparator<NodeSwap>() {
                 @Override
@@ -804,11 +816,7 @@ public class Heuristics {
 
             //removal a kivett node elott
             Node previousNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1);
-            if (!previousNode.isDepot() && !previousNode.isDumpingSite() /*&& indexToRemoveFrom != vehicleToRemoveFrom.getRoute().size() - 2*/) {
-                if (indexToRemoveFrom - 2 == -1 || indexToRemoveFrom == vehicleToRemoveFrom.getRoute().size()) {
-                    System.out.println("hujuj " + previousNode.isDepot());
-                }
-
+            if (!previousNode.isDepot() && !previousNode.isDumpingSite()) {
                 float distanceBeforeRemoval_ = data.getDistanceBetweenNode(previousNode, nodeToRemove);
                 float distanceAfterRemoval_ = data.getDistanceBetweenNode(previousNode, vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom));
                 currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
@@ -830,7 +838,7 @@ public class Heuristics {
 
             //removal a kivett node utan
             Node nextNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom);
-            if (!nextNode.isDepot() && !nextNode.isDumpingSite()/* && indexToRemoveFrom != 1*/) {
+            if (!nextNode.isDepot() && !nextNode.isDumpingSite()) {
                 float distanceBeforeRemoval_ = data.getDistanceBetweenNode(nodeToRemove, nextNode);
                 float distanceAfterRemoval_ = data.getDistanceBetweenNode(vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1), nextNode);
                 currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
@@ -842,17 +850,19 @@ public class Heuristics {
                     currentNodeSwap.setIndex(indexToRemoveFrom);
                 }
             }
-
-            LocalTime removeEndTime = LocalTime.now();
-            //logger.log((nodesToSwap.size() + 1) + "th node removal ended at: " + removeEndTime + ", took " + removeStartTime.until(removeEndTime, ChronoUnit.SECONDS) + " seconds");
         }
+
         LocalTime endTime = LocalTime.now();
-        logger.log("worstRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("worstRemoval ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
     private void deleteDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
         logger.log("deleteDisposal started at: " + startTime);
+        long startNanoTime = System.nanoTime();
 
         List<NodeSwap> nodeSwapList = new ArrayList<>();
         //only those routes where are more than one dump
@@ -896,7 +906,7 @@ public class Heuristics {
         int dumpingSiteIndex = nodeSwap.getIndex();
 
         // TODO: for loop
-        nodeSwapList.stream().filter(nodeSwap1 -> nodeSwap1.getVehicle() == vehicle).collect(Collectors.toList());
+        nodeSwapList.stream().filter(nodeSwap1 -> nodeSwap1.getVehicle().equals(vehicle)).collect(Collectors.toList());
 
         //I might not need the sort at all, since in the loop line 1006 I put the dump from the vehicle in order, so they'll be next to
         //each other, also when I filter them
@@ -946,12 +956,16 @@ public class Heuristics {
         }
 
         LocalTime endTime = LocalTime.now();
-        logger.log("worstRemoval ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("deleteDisposal ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
     private void swapDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
         logger.log("swapDisposal started at: " + startTime);
+        long startNanoTime = System.nanoTime();
 
         List<NodeSwap> nodeSwapList = new ArrayList<>();
         // TODO: for loop
@@ -1028,30 +1042,29 @@ public class Heuristics {
         }
 
         LocalTime endTime = LocalTime.now();
-        logger.log("swapDisposal ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("swapDisposal ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
     private void insertDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
+
         LocalTime startTime = LocalTime.now();
-        logger.log("insertDisposal started at: " + startTime);
+        logger.log("inertDisposal started at: " + startTime);
+        long startNanoTime = System.nanoTime();
 
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
+        for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3 && !vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
         int randomIndex = random.nextInt(feasibleVehicles.size());
         Vehicle vehicleToInsertInto = feasibleVehicles.get(randomIndex);
-        // TODO: for loop
-        //List<Node> disposalSites = vehicleToInsertInto.getRoute().stream().filter(Node::isDumpingSite).collect(Collectors.toList());
-        List<Node> disposalSites = new ArrayList<>();
-        for (Node node : vehicleToInsertInto.getRoute()) if (node.isDumpingSite()) disposalSites.add(node);
-        Node dumpingSiteToInsertAfter = disposalSites.get(disposalSites.size() - 1);
 
-        // TODO: for looő
+        // TODO: for loop
         //List<Node> disposalSitesToSwapWith = data.getNodeList().stream().filter(disposalSite -> disposalSite.isDumpingSite() && (int)disposalSite.getId() != dumpingSiteToInsertAfter.getId()).collect(Collectors.toList());
         List<Node> disposalSitesToSwapWith = new ArrayList<>();
         for (Node disposalSite : data.getNodeList())
-            if (disposalSite.isDumpingSite() && (int) disposalSite.getId() != dumpingSiteToInsertAfter.getId())
+            if (disposalSite.isDumpingSite())
                 disposalSitesToSwapWith.add(disposalSite);
         randomIndex = random.nextInt(disposalSitesToSwapWith.size());
         Node disposalSiteToInsert = disposalSitesToSwapWith.get(randomIndex);
@@ -1080,7 +1093,9 @@ public class Heuristics {
         }
 
         LocalTime endTime = LocalTime.now();
-        logger.log("insertDisposal ended at: " + endTime + ", took " + startTime.until(endTime, ChronoUnit.SECONDS) + " seconds");
+        long endNanoTime = System.nanoTime();
+        logger.log("insertDisposal ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
+
     }
 
 }

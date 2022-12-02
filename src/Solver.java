@@ -43,15 +43,18 @@ public class Solver {
         data.getFleet().add(penaltyVehicle);
 
         //set the current node to the depot, set the current vehicle, and it's first node to the depot node
-        Node currentNode = data.getDepotNode();
-        Node nextNode;
+        float
+                currentTime,
+                serviceTime,
+                travelTime,
+                quantity;
+        Node
+                currentNode = data.getDepotNode(),
+                dumpingSite,
+                nextNode;
         Vehicle currentVehicle = data.getFleet().get(0);
-        float currentTime;
-        float travelTime;
-        float serviceTime;
-        float quantity;
         StringBuilder currentVehicleRouteStringBuilder;
-        Node dumpingSite;
+
         currentVehicle.getRoute().add(currentNode);
         currentVehicle.setCurrentTime((float) currentNode.getTimeStart());
         currentVehicle.getArrivalTimes().add((float) currentNode.getTimeStart());
@@ -158,7 +161,7 @@ public class Solver {
 
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());
-        System.out.println("greedy finished");
+        //System.out.println("greedy finished");
     }
 
     public void ALNS(Data data, Logger logger) {
@@ -183,35 +186,58 @@ public class Solver {
         HeuristicWeights heuristicWeights = new HeuristicWeights();
 
         data.destroyInfo();
-        Data bestData = new Data(data);
-        Data currentData;
-        float T = calculateInitialTemperature(data, CONSTANTS.getW()), bestValue = getDataValue(bestData), currentValue, newValue, delta;
-        List<Node> nodesToSwap;
-        int numberOfSteps = 1, score = 0, numberOfNodesToSwap, upperLimit, noBetterSolutionFound = 0, customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4);
-        String hashCode;
-        StringBuilder currentVehicleRouteStringBuilder;
+
+        Data
+                bestData = new Data(data),
+                currentData;
+        int
+                customerNodeCount = (int) (data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count() * 0.4),
+                numberOfSteps = 1,
+                numberOfNodesToSwap,
+                noBetterSolutionFound = 0,
+                score = 0;
+        float
+                bestValue = getDataValue(bestData),
+                currentValue,
+                delta,
+                newValue,
+                T = calculateInitialTemperature(data, CONSTANTS.getW());
+        List<Node>
+                nodesToSwap;
+        List<Float>
+                valueList = new ArrayList<>();
+        List<HeuristicWeights>
+                heuristicWeightsList = new ArrayList<>();
+        String
+                hashCode;
+
+        valueList.add(bestValue);
+        heuristicWeightsList.add(heuristicWeights);
+
         while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
-            long arrivalTimeUpdateTimeTotal = 0;
+
             logger.log("Iteration " + numberOfSteps);
-            System.out.println("Number of iterations without better solution: " + noBetterSolutionFound);
             iterationStart = System.nanoTime();
-            System.out.println(numberOfSteps + " of " + data.getInfo());
-            //System.out.println("Better solution hasn't been found in " + noBetterSolutionFound + " iteration");
+
+            //System.out.println(numberOfSteps + " of " + data.getInfo() + ", not better solution found in " + noBetterSolutionFound);
+
             currentData = new Data(data);
             currentValue = getDataValue(currentData);
             logger.log("Current data value: " + currentValue);
+
             nodesToSwap = new ArrayList<>();
-            numberOfNodesToSwap = 4 + (int)(Math.random() * (Math.min(((int)(customerNodeCount * 0.4) - 4),100) + 1));
-            //System.out.println("nodes to swap: " + numberOfNodesToSwap);
-            logger.log("Number of nodes to swap: " + numberOfNodesToSwap);
+            numberOfNodesToSwap = 4 + (int)(Math.random() * (Math.min(((int)(customerNodeCount * 0.4) - 4), 100) + 1));
+
             heuristics.destroyNodes(currentData, numberOfNodesToSwap, nodesToSwap, heuristicWeights, logger);
-            long a = System.nanoTime();
+
             updateArrivalTimes(currentData);
-            long b = System.nanoTime();
-            arrivalTimeUpdateTimeTotal += (b - a);
+
             heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger);
             newValue = getDataValue(currentData);
+
+            //System.out.println(newValue);
             logger.log("New data value: " + newValue);
+
             delta = newValue - currentValue;
             hashCode = currentData.dataToHash();
 
@@ -225,11 +251,10 @@ public class Solver {
                 }
 
                 data = currentData;
-                a = System.nanoTime();
                 updateArrivalTimes(data);
-                b = System.nanoTime();
-                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("Solution accepted by default");
+
+                valueList.add(newValue);
 
             } else if (Math.exp(-1 * (delta) / T) > Math.random()) {
 
@@ -239,11 +264,10 @@ public class Solver {
                 }
 
                 data = currentData;
-                a = System.nanoTime();
                 updateArrivalTimes(data);
-                b = System.nanoTime();
-                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("Solution accepted by chance");
+
+                valueList.add(newValue);
 
             }
 
@@ -258,10 +282,7 @@ public class Solver {
 
                 bestValue = newValue;
                 bestData = new Data(currentData);
-                a = System.nanoTime();
                 updateArrivalTimes(bestData);
-                b = System.nanoTime();
-                arrivalTimeUpdateTimeTotal += (b - a);
                 logger.log("New best solution found");
 
             } else {
@@ -272,12 +293,12 @@ public class Solver {
             //update information about performance of destroy and repair methods
             if (numberOfSteps % 100 == 0) {
                 updateWeights(heuristicWeights, CONSTANTS.getR());
+                heuristicWeightsList.add(new HeuristicWeights(heuristicWeights));
             }
             numberOfSteps++;
             T *= 0.995;
             iterationEnd = System.nanoTime();
             logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
-            logger.log("Updating arrival times took " + (arrivalTimeUpdateTimeTotal * 1e-9) + " seconds");
             logger.emptyLine();
             logger.emptyLine();
         }
@@ -292,40 +313,7 @@ public class Solver {
         logger.log("ALNS took " + ((endALNSNano - startALNSNano) * 1e-9) + " seconds.");
         logger.emptyLine();
 
-        float travelDistance, sumTravelDistance = 0;
-        int numberOfCustomers;
-
-        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3 || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
-            travelDistance = vehicle.calculateTravelDistance(bestData);
-            sumTravelDistance += travelDistance;
-            numberOfCustomers = (int) vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
-            currentVehicleRouteStringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s service time: "
-                    + travelDistance + " with " + numberOfCustomers + " customers.");
-            logger.log(currentVehicleRouteStringBuilder.toString());
-        }
-        logger.log("Total travel distance: " + sumTravelDistance);
-        logger.emptyLine();
-
-        int customerNumber = 0;
-
-        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
-            currentVehicleRouteStringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s route: ");
-            for (Node node : vehicle.getRoute()) {
-                String str;
-                if (node.isDepot()) {
-                    str = "DP0";
-                } else if (node.isDumpingSite()) {
-                    str = "DS" + node.getId();
-                } else {
-                    str = node.getId().toString();
-                    customerNumber++;
-                }
-                currentVehicleRouteStringBuilder.append(str).append(" ");
-            }
-            logger.log(currentVehicleRouteStringBuilder.toString());
-        }
-
-        logger.log("Number of customers on all vehicles: " + customerNumber);
+        vehicleAndHeuristicInformation(bestData, logger, heuristicWeightsList, valueList);
 
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());
@@ -386,6 +374,8 @@ public class Solver {
                 + r * (heuristicWeights.getDeleteDisposalScore() / (float) heuristicWeights.getTimesUsedDeleteDisposal());
         float newSwapDisposalWeight = heuristicWeights.getSwapDisposalWeight() * (1 - r)
                 + r * (heuristicWeights.getSwapDisposalScore() / (float) heuristicWeights.getTimesUsedSwapDisposal());
+        float newInsertDisposalWeight = heuristicWeights.getInsertDisposalWeight() * (1 - r)
+                + r * (heuristicWeights.getInsertDisposalScore() / (float) heuristicWeights.getTimesUsedInsertDisposal());
         float newGreedyInsertWeight = heuristicWeights.getGreedyInsertWeight() * (1 - r)
                 + r * (heuristicWeights.getGreedyInsertScore() / (float) heuristicWeights.getTimesUsedGreedyInsert());
         float newRegret_2_InsertWeight = heuristicWeights.getRegret_2_InsertWeight() * (1 - r)
@@ -399,6 +389,7 @@ public class Solver {
         heuristicWeights.setRelatedRemovalWeight(newRelatedRemoveWeight);
         heuristicWeights.setDeleteDisposalWeight(newDeleteDisposalWeight);
         heuristicWeights.setSwapDisposalWeight(newSwapDisposalWeight);
+        heuristicWeights.setInsertDisposalWeight(newInsertDisposalWeight);
         heuristicWeights.setGreedyInsertWeight(newGreedyInsertWeight);
         heuristicWeights.setRegret_2_InsertWeight(newRegret_2_InsertWeight);
         heuristicWeights.setRegret_3_InsertWeight(newRegret_3_InsertWeight);
@@ -408,6 +399,7 @@ public class Solver {
         heuristicWeights.setRelatedRemovalScore(0);
         heuristicWeights.setDeleteDisposalScore(0);
         heuristicWeights.setSwapDisposalScore(0);
+        heuristicWeights.setInsertDisposalScore(0);
         heuristicWeights.setGreedyInsertScore(0);
         heuristicWeights.setRegret_2_InsertScore(0);
         heuristicWeights.setRegret_3_InsertScore(0);
@@ -443,6 +435,9 @@ public class Solver {
                 heuristicWeights.setSwapDisposalScore(heuristicWeights.getSwapDisposalScore() + score);
                 heuristicWeights.setTimesUsedSwapDisposal(heuristicWeights.getTimesUsedSwapDisposal() + 1);
                 break;
+            case 6:
+                heuristicWeights.setInsertDisposalScore(heuristicWeights.getInsertDisposalScore() + score);
+                heuristicWeights.setTimesUsedInsertDisposal(heuristicWeights.getTimesUsedInsertDisposal() + 1);
             default:
                 break;
         }
@@ -514,5 +509,86 @@ public class Solver {
             overallDistance += distance;
         }
         return overallDistance;
+    }
+
+    private void vehicleAndHeuristicInformation(Data bestData, Logger logger, List<HeuristicWeights> heuristicWeightsList, List<Float> actualValues) {
+        float travelDistance, sumTravelDistance = 0;
+        int numberOfCustomers;
+
+        StringBuilder stringBuilder;
+        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3 || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
+            travelDistance = vehicle.calculateTravelDistance(bestData);
+            sumTravelDistance += travelDistance;
+            numberOfCustomers = (int) vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
+            stringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s service time: "
+                    + travelDistance + " with " + numberOfCustomers + " customers.");
+            logger.log(stringBuilder.toString());
+        }
+        logger.log("Total travel distance: " + sumTravelDistance);
+        logger.emptyLine();
+
+        int customerNumber = 0;
+        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
+            stringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s route: ");
+            for (Node node : vehicle.getRoute()) {
+                String str;
+                if (node.isDepot()) {
+                    str = "DP0";
+                } else if (node.isDumpingSite()) {
+                    str = "DS" + node.getId();
+                } else {
+                    str = node.getId().toString();
+                    customerNumber++;
+                }
+                stringBuilder.append(str).append(" ");
+            }
+            logger.log(stringBuilder.toString());
+        }
+        logger.log("Number of customers on all vehicles: " + customerNumber);
+
+        logger.emptyLine();
+
+        stringBuilder = new StringBuilder("Values in each iteration: ");
+        for(Float value : actualValues) stringBuilder.append(value).append(" ");
+        logger.log(stringBuilder.toString());
+        logger.emptyLine();
+
+        logger.log("Weights of each heuristic during:");
+        StringBuilder
+                rndR = new StringBuilder("randomRemove: "),
+                wR = new StringBuilder("worstRemove: "),
+                relR = new StringBuilder("relatedRemove: "),
+                dD = new StringBuilder("deleteDisposal: "),
+                sD = new StringBuilder("swapDisposal: "),
+                iD = new StringBuilder("insertDisposal: "),
+                gI = new StringBuilder("greedyInsert: "),
+                r2I = new StringBuilder("regret_2_Insert: "),
+                r3I = new StringBuilder("regret_3_Insert: "),
+                rKI = new StringBuilder("regret_K_Insert: ");
+
+        for(HeuristicWeights heuristicWeight : heuristicWeightsList) {
+            rndR.append(heuristicWeight.getRandomRemovalWeight()).append(" ");
+            wR.append(heuristicWeight.getWorstRemovalWeight()).append(" ");
+            relR.append(heuristicWeight.getRelatedRemovalWeight()).append(" ");
+            dD.append(heuristicWeight.getDeleteDisposalWeight()).append(" ");
+            sD.append(heuristicWeight.getSwapDisposalWeight()).append(" ");
+            iD.append(heuristicWeight.getInsertDisposalWeight()).append(" ");
+            gI.append(heuristicWeight.getGreedyInsertWeight()).append(" ");
+            r2I.append(heuristicWeight.getRegret_2_InsertWeight()).append(" ");
+            r3I.append(heuristicWeight.getRegret_3_InsertWeight()).append(" ");
+            rKI.append(heuristicWeight.getRegret_K_InsertWeight()).append(" ");
+        }
+
+        logger.log(rndR.toString());
+        logger.log(wR.toString());
+        logger.log(relR.toString());
+        logger.log(dD.toString());
+        logger.log(sD.toString());
+        logger.log(iD.toString());
+        logger.log(gI.toString());
+        logger.log(r2I.toString());
+        logger.log(r3I.toString());
+        logger.log(rKI.toString());
+
     }
 }
