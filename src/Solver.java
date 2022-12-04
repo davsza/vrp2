@@ -141,9 +141,12 @@ public class Solver {
             logger.log(currentVehicleRouteStringBuilder.toString());
         }
         logger.log("Total travel distance: " + sumTravelDistance);
+        logger.log("_data: " + data.getInfo());
+        logger.log("_greedyDistance: " + sumTravelDistance);
+        logger.log("_vehicleCountG: " + data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).count());
         logger.emptyLine();
 
-        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
+        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).collect(Collectors.toList())) {
             currentVehicleRouteStringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s route: ");
             for (Node node : vehicle.getRoute()) {
                 String str;
@@ -275,10 +278,8 @@ public class Solver {
 
                 noBetterSolutionFound = 0;
 
-                if (!hashes.contains(hashCode)) {
-                    score = CONSTANTS.getSIGMA_1();
-                    hashes.add(hashCode);
-                }
+                score = CONSTANTS.getSIGMA_1();
+                hashes.add(hashCode);
 
                 bestValue = newValue;
                 bestData = new Data(currentData);
@@ -313,7 +314,7 @@ public class Solver {
         logger.log("ALNS took " + ((endALNSNano - startALNSNano) * 1e-9) + " seconds.");
         logger.emptyLine();
 
-        vehicleAndHeuristicInformation(bestData, logger, heuristicWeightsList, valueList);
+        vehicleAndHeuristicInformation(bestData, logger, heuristicWeightsList, valueList, numberOfSteps);
 
         logger.emptyLine();
         logger.log(CONSTANTS.getDividerString());
@@ -511,7 +512,7 @@ public class Solver {
         return overallDistance;
     }
 
-    private void vehicleAndHeuristicInformation(Data bestData, Logger logger, List<HeuristicWeights> heuristicWeightsList, List<Float> actualValues) {
+    private void vehicleAndHeuristicInformation(Data bestData, Logger logger, List<HeuristicWeights> heuristicWeightsList, List<Float> actualValues, int numberOfSteps) {
         float travelDistance, sumTravelDistance = 0;
         int numberOfCustomers;
 
@@ -525,11 +526,18 @@ public class Solver {
             logger.log(stringBuilder.toString());
         }
         logger.log("Total travel distance: " + sumTravelDistance);
+
+        logger.log("_ALNSDistance: " + sumTravelDistance);
+        logger.log("_iterations: " + numberOfSteps);
+        logger.log("_vehicleCountA: " + bestData.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).count());
+        stringBuilder = new StringBuilder("_values: ");
+        for(Float value : actualValues) stringBuilder.append(value).append(",");
+        logger.log(stringBuilder.toString());
         logger.emptyLine();
 
         int customerNumber = 0;
-        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList())) {
-            stringBuilder = new StringBuilder("Vehicle " + vehicle.getId() + "'s route: ");
+        for (Vehicle vehicle : bestData.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).collect(Collectors.toList())) {
+            stringBuilder = new StringBuilder("$Vehicle " + vehicle.getId() + "'s route: ");
             for (Node node : vehicle.getRoute()) {
                 String str;
                 if (node.isDepot()) {

@@ -100,7 +100,7 @@ public class Heuristics {
                     continue;
                 }
                 if (checkedEmptyVehicle) continue;
-                checkedEmptyVehicle = vehicle.getRoute().size() == 3;
+                checkedEmptyVehicle = vehicle.isEmpty();
                 int vehicleRouteSize = vehicle.getRoute().size();
                 currentNodeSwap = new NodeSwap(nodesToInsert);
                 for (int i = 1; i < vehicleRouteSize - 1; i++) {
@@ -392,7 +392,7 @@ public class Heuristics {
                     continue;
                 }
                 if (checkedEmptyVehicle) continue;
-                checkedEmptyVehicle = vehicle.getRoute().size() == 3;
+                checkedEmptyVehicle = vehicle.isEmpty();
                 for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
                     float previousNodeArrivalTime = vehicle.getArrivalTimes().get(i - 1);
                     Node previousNode = vehicle.getRoute().get(i - 1);
@@ -478,7 +478,7 @@ public class Heuristics {
                         }
 
                         if (checkedEmptyVehicle) continue;
-                        checkedEmptyVehicle = vehicle.getRoute().size() == 3;
+                        checkedEmptyVehicle = vehicle.isEmpty();
 
                         for (int i = 1; i < vehicle.getRoute().size() - 1; i++) {
 
@@ -658,7 +658,7 @@ public class Heuristics {
             // TODO: for loop
             //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
             List<Vehicle> feasibleVehicles = new ArrayList<>();
-            for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
+            for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty()) feasibleVehicles.add(vehicle);
             for (Vehicle vehicle : feasibleVehicles) {
                 // TODO: for loop
                 //List<Node> feasibleNodes = vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).collect(Collectors.toList());
@@ -754,7 +754,7 @@ public class Heuristics {
 
         //minden kocsi minden customer nodejara kiszamoljuk, hogy ha kivennenk, mennyi lenne az erteke
         for (Vehicle vehicle : data.getFleet()) {
-            if (vehicle.getRoute().size() < 4 || vehicle.isPenaltyVehicle()) {
+            if (vehicle.isEmpty() || vehicle.isPenaltyVehicle()) {
                 continue;
             }
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
@@ -978,7 +978,7 @@ public class Heuristics {
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3) feasibleVehicles.add(vehicle);
+        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty()) feasibleVehicles.add(vehicle);
         for (Vehicle vehicle : feasibleVehicles) {
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);
@@ -1056,7 +1056,7 @@ public class Heuristics {
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) if (vehicle.getRoute().size() > 3 && !vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
+        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty() && !vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
         int randomIndex = random.nextInt(feasibleVehicles.size());
         Vehicle vehicleToInsertInto = feasibleVehicles.get(randomIndex);
 

@@ -7,8 +7,8 @@ public class Node {
     private Float cx;
     private Float cy;
     private Float quantity;
-    private Integer timeStart;
-    private Integer timeEnd;
+    private Float timeStart;
+    private Float timeEnd;
     private Float serviceTime;
 
     private Boolean visited;
@@ -117,11 +117,11 @@ public class Node {
         this.quantity = quantity;
     }
 
-    public void setTimeStart(Integer timeStart) {
+    public void setTimeStart(Float timeStart) {
         this.timeStart = timeStart;
     }
 
-    public void setTimeEnd(Integer timeEnd) {
+    public void setTimeEnd(Float timeEnd) {
         this.timeEnd = timeEnd;
     }
 
@@ -149,11 +149,11 @@ public class Node {
         return quantity;
     }
 
-    public Integer getTimeStart() {
+    public Float getTimeStart() {
         return timeStart;
     }
 
-    public Integer getTimeEnd() {
+    public Float getTimeEnd() {
         return timeEnd;
     }
 

@@ -44,6 +44,15 @@ public class Vehicle {
         }
     }
 
+    public boolean isEmpty() {
+        for(Node node : route) {
+            if(node.customerNode()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public List<Float> getArrivalTimes() {
         return arrivalTimes;
     }
@@ -144,26 +153,13 @@ public class Vehicle {
         }
         // TODO: for loop
         //int customerNodeListSize = (int) route.stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
-        int customerNodeListSize = 0;
-        for(Node node : route) if(!node.isDepot() && !node.isDumpingSite()) customerNodeListSize++;
-        if(customerNodeListSize == 0) {
-            return 0;
-        }
+        if(isEmpty()) return 0;
         float travelDistance = 0;
         for(int i = 1; i < route.size(); i++) {
             float travelDistanceBetweenNodes = data.getDistanceBetweenNode(route.get(i - 1), route.get(i));
             travelDistance += travelDistanceBetweenNodes;
         }
         return travelDistance;
-    }
-
-    public List<Node> copyRoute() {
-        List<Node> route = new ArrayList<>();
-        for(Node node : getRoute()) {
-            Node copiedNode = new Node(node);
-            route.add(copiedNode);
-        }
-        return route;
     }
 
     public String routeHash() {

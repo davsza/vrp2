@@ -59,9 +59,9 @@ public class Parser {
         this.section = section;
     }
 
-    public List<Data> parseKimInstances() {
+    public List<Data> parseInstances(boolean solomon) {
         for(File fileEntry : Objects.requireNonNull(folder.listFiles())) {
-            System.out.println("Parsing " + fileEntry.getName());
+            //System.out.println("Parsing " + fileEntry.getName());
             Data data = new Data();
             Float[][] matrix = null;
             int size;
@@ -76,7 +76,7 @@ public class Parser {
                         data.setDataset(datasetAndName[0].strip());
                         data.setInfo(datasetAndName[1].strip());
                         String dataSetSize = datasetAndName[1].strip().split("_")[1];
-                        size = getDataSetSize(dataSetSize);
+                        size = getDataSetSize(dataSetSize, solomon);
                         matrix = new Float[size][size];
                         idx++; continue;
                     } else if(line.contains("Nodes")) {
@@ -97,10 +97,9 @@ public class Parser {
                         node.setCx(Float.parseFloat(nodeAttributes[0]));
                         node.setCy(Float.parseFloat(nodeAttributes[1]));
                         node.setQuantity(Float.parseFloat(nodeAttributes[2]));
-                        node.setTimeStart(Integer.parseInt(nodeAttributes[3]));
-                        node.setTimeEnd(Integer.parseInt(nodeAttributes[4]));
+                        node.setTimeStart(Float.parseFloat(nodeAttributes[3]));
+                        node.setTimeEnd(Float.parseFloat(nodeAttributes[4]));
                         node.setServiceTime(Float.parseFloat(nodeAttributes[5]));
-
                         // setting depot node
                         if(data.getNodeListSize() == 0) {
                             node.setDepot(true);
@@ -142,9 +141,10 @@ public class Parser {
         return data;
     }
 
-    private int getDataSetSize(String dataSetSize) {
+    private int getDataSetSize(String dataSetSize, boolean solomon) {
         if (dataSetSize.startsWith("0")) dataSetSize.substring(1);
-        return Integer.parseInt(dataSetSize);
+        int size = Integer.parseInt(dataSetSize);
+        return solomon ? size + 2 : size;
     }
 
 }
