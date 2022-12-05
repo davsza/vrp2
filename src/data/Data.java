@@ -120,11 +120,13 @@ public class Data {
         float distance = Float.MAX_VALUE;
         Node nextNode = new Node();
         nextNode.setNullNode(true);
+        Node nearestDump = getNearestDumpingSiteNode(currentVehicle, currentNode);
+        float dumpDistance = getDistanceBetweenNode(currentNode, nearestDump);
         List<Node> feasibleNodes = nodeList.stream().filter(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited()).collect(Collectors.toList());
         for(Node node : feasibleNodes) {
             float travelDistance = getDistanceBetweenNode(currentNode, node);
             if(currentNode.isDepot()
-                    && currentNode.getTimeStart() + travelDistance <= node.getTimeEnd()
+                    && currentNode.getTimeStart() + currentNode.getServiceTime() + travelDistance <= node.getTimeEnd()
                     && node.getTimeStart() <= currentNode.getTimeEnd() + travelDistance
                     && capacityCheck(currentVehicle, node)
                     && maximumNodesVisited(currentVehicle)) {
@@ -133,12 +135,17 @@ public class Data {
             } else if(travelDistance < distance
                     && capacityCheck(currentVehicle, node)
                     && maximumNodesVisited(currentVehicle)
-                    && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)
-                    && currentVehicle.getCurrentTime() + travelDistance >= node.getTimeStart()
+                    && timeWindowCheck(currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance, node)
+                    && currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance >= node.getTimeStart()
                     && checkForDepotTW(currentVehicle, currentNode)) {
                 distance = travelDistance;
                 nextNode = node;
             }
+        }
+        if(currentVehicle.getCapacity() >= currentVehicle.getMaximumCapacity() * 0.8 && dumpDistance < distance) {
+            Node nullNode = new Node();
+            nullNode.setNullNode(true);
+            return nullNode;
         }
         return nextNode;
     }
