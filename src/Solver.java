@@ -66,7 +66,11 @@ public class Solver {
                 travelTime = data.getDistanceBetweenNode(currentNode, nextNode);
                 serviceTime = currentNode.getServiceTime();
                 quantity = nextNode.getQuantity();
-                currentVehicle.setCurrentTime(currentTime + serviceTime + travelTime);
+                if(!currentNode.isDepot()) {
+                    currentVehicle.setCurrentTime(currentTime + serviceTime + travelTime);
+                } else {
+                    currentVehicle.setCurrentTime(Math.max(currentTime + serviceTime + travelTime, nextNode.getTimeStart()));
+                }
                 currentVehicle.setCapacity(currentVehicle.getCapacity() + quantity);
 
                 currentNode = nextNode;
@@ -132,7 +136,7 @@ public class Solver {
         float travelDistance, sumTravelDistance = 0;
         int numberOfCustomers;
 
-        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3 || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
+        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() || vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             travelDistance = vehicle.calculateTravelDistance(data);
             sumTravelDistance += travelDistance;
             numberOfCustomers = (int) vehicle.getRoute().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
@@ -160,6 +164,13 @@ public class Solver {
                 currentVehicleRouteStringBuilder.append(str).append(" ");
             }
             logger.log(currentVehicleRouteStringBuilder.toString());
+        }
+
+        for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle() && !vehicle.isEmpty()).collect(Collectors.toList())){
+            boolean valid = checkForValidity(data, vehicle, false);
+            if(!valid) {
+                System.out.println("Vehicle " + vehicle.getId() + " is invalid!");
+            }
         }
 
         logger.emptyLine();
@@ -222,6 +233,7 @@ public class Solver {
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
 
+            System.out.println("Iteration " + numberOfSteps);
             //System.out.println(numberOfSteps + " of " + data.getInfo() + ", not better solution found in " + noBetterSolutionFound);
 
             currentData = new Data(data);
@@ -238,7 +250,14 @@ public class Solver {
             heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger);
             newValue = getDataValue(currentData);
 
-            //System.out.println(newValue);
+            for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle() && !vehicle.isEmpty()).collect(Collectors.toList())) {
+                boolean valid = checkForValidity(data, vehicle, false);
+                if (!valid) {
+                    System.out.println("Vehicle " + vehicle.getId() + " is invalid!");
+                }
+            }
+
+                //System.out.println(newValue);
             logger.log("New data value: " + newValue);
 
             delta = newValue - currentValue;
@@ -465,7 +484,7 @@ public class Solver {
 
     }
 
-    public boolean checkForValidity(Data data, Vehicle vehicle) {
+    public boolean checkForValidity(Data data, Vehicle vehicle, boolean asd) {
         List<Node> route = vehicle.getRoute();
 
         if (route.size() > vehicle.getMaximumNumberOfStopsToVisit()) {
@@ -479,6 +498,8 @@ public class Solver {
         previousNode = currentNode;
         for (int i = 1; i < route.size(); i++) {
             currentNode = route.get(i);
+            float serviceTimeAtPreviousNode = previousNode.getServiceTime();
+            float travelTime = data.getDistanceBetweenNode(previousNode, currentNode);
             if (currentNode.isDumpingSite()) {
                 vehicle.setCapacity((float) 0);
             } else if (!currentNode.isDepot()) {
@@ -487,16 +508,15 @@ public class Solver {
             }
 
             if (vehicle.getCapacity() > vehicle.getMaximumCapacity()) {
+                if(asd) System.out.println("Capacity ERROR between node " + (i - 1) + " and " + i);
                 return false;
             }
 
-            float serviceTimeAtPreviousNode = previousNode.getServiceTime();
-            float travelDistance = data.getDistanceBetweenNode(previousNode, currentNode);
-
-            if (!data.timeWindowCheck(currentTime + serviceTimeAtPreviousNode + travelDistance, currentNode)) {
+            if (!data.timeWindowCheck(currentTime + serviceTimeAtPreviousNode + travelTime, currentNode)) {
+                if(asd) System.out.println("TW ERROR between node " + (i - 1) + " and " + i);
                 return false;
             }
-            currentTime = Math.max(currentTime + previousNode.getServiceTime() + travelDistance, currentNode.getTimeStart());
+            currentTime = Math.max(currentTime + serviceTimeAtPreviousNode + travelTime, currentNode.getTimeStart());
             vehicle.setCurrentTime(currentTime);
             previousNode = currentNode;
         }
@@ -527,6 +547,7 @@ public class Solver {
         }
         logger.log("Total travel distance: " + sumTravelDistance);
 
+        System.out.println(sumTravelDistance);
         logger.log("_ALNSDistance: " + sumTravelDistance);
         logger.log("_iterations: " + numberOfSteps);
         logger.log("_vehicleCountA: " + bestData.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).count());

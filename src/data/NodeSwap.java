@@ -12,6 +12,7 @@ public class NodeSwap {
     private Set<Vehicle> vehicleSet;
     private List<Float> values;
     private List<NodeSwap> regretNodeSwapList;
+    private boolean modified;
 
     public NodeSwap(Node node, Vehicle vehicle, float value, int index, boolean foundVehicleForNodeToInsert) {
         this.node = node;
@@ -29,6 +30,14 @@ public class NodeSwap {
     }
 
     public NodeSwap() {
+    }
+
+    public boolean isModified() {
+        return modified;
+    }
+
+    public void setModified(boolean modified) {
+        this.modified = modified;
     }
 
     public int getNumberOfFeasibleVehiclesToInsertInto() {
