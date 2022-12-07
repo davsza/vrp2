@@ -126,6 +126,13 @@ public class Solver {
             vehicle.getArrivalTimes().add(vehicle.getArrivalTimes().get(1) + dump.getServiceTime() + data.getDistanceBetweenNode(dump, depotNode));
         }
 
+        for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
+            boolean valid = checkForValidity(data, vehicle, true);
+            if(!valid) {
+                System.out.println("GREEDY NEMJO HUJUJUJ");
+            }
+        }
+
         LocalTime endGreedy = LocalTime.now();
         long endGreedyNano = System.nanoTime();
 
@@ -216,6 +223,8 @@ public class Solver {
                 delta,
                 newValue,
                 T = calculateInitialTemperature(data, CONSTANTS.getW());
+        boolean
+                printSwapInfo = false;
         List<Node>
                 nodesToSwap;
         List<Float>
@@ -233,7 +242,7 @@ public class Solver {
             logger.log("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
 
-            System.out.println("Iteration " + numberOfSteps);
+            //System.out.println("Iteration " + numberOfSteps);
             //System.out.println(numberOfSteps + " of " + data.getInfo() + ", not better solution found in " + noBetterSolutionFound);
 
             currentData = new Data(data);
@@ -243,12 +252,31 @@ public class Solver {
             nodesToSwap = new ArrayList<>();
             numberOfNodesToSwap = 4 + (int)(Math.random() * (Math.min(((int)(customerNodeCount * 0.4) - 4), 100) + 1));
 
-            heuristics.destroyNodes(currentData, numberOfNodesToSwap, nodesToSwap, heuristicWeights, logger);
+            heuristics.destroyNodes(currentData, numberOfNodesToSwap, nodesToSwap, heuristicWeights, logger, printSwapInfo);
 
             updateArrivalTimes(currentData);
 
-            heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger);
+            heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger, printSwapInfo);
+            int num = 0;
+            for(Vehicle vehicle : data.getFleet()) {
+                for(Node node : vehicle.getRoute()) {
+                    if(node.customerNode()) {
+                        num++;
+                    }
+                }
+            }
+            if(num != data.getMatrix().length - 2) {
+                System.out.println("Customer number count ERROR");
+            }
             newValue = getDataValue(currentData);
+
+            for(Vehicle vehicle : data.getFleet()) {
+                if(vehicle.isPenaltyVehicle()) {
+                    if(vehicle.getRoute().size() > 0) {
+                        //System.out.println("Penaltyvehicle has customers on it");
+                    }
+                }
+            }
 
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle() && !vehicle.isEmpty()).collect(Collectors.toList())) {
                 boolean valid = checkForValidity(data, vehicle, false);
@@ -321,6 +349,14 @@ public class Solver {
             logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
             logger.emptyLine();
             logger.emptyLine();
+        }
+
+        for(Vehicle vehicle : data.getFleet()) {
+            if(vehicle.isPenaltyVehicle()) {
+                if(vehicle.getRoute().size() > 0) {
+                    System.out.println("Penalty vehicle has customers on it");
+                }
+            }
         }
 
         // TODO: do something with the best found solution (bestData)
@@ -513,7 +549,10 @@ public class Solver {
             }
 
             if (!data.timeWindowCheck(currentTime + serviceTimeAtPreviousNode + travelTime, currentNode)) {
-                if(asd) System.out.println("TW ERROR between node " + (i - 1) + " and " + i);
+                if(asd) {
+                    System.out.println((currentTime + serviceTimeAtPreviousNode + travelTime) + "," + currentNode.getTimeEnd());
+                    System.out.println("TW ERROR between node " + (i - 1) + " and " + i);
+                }
                 return false;
             }
             currentTime = Math.max(currentTime + serviceTimeAtPreviousNode + travelTime, currentNode.getTimeStart());
@@ -525,7 +564,7 @@ public class Solver {
 
     public float getDataValue(Data data) {
         float overallDistance = 0;
-        for (Vehicle vehicle : data.getFleet()) {
+        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).collect(Collectors.toList())) {
             float distance = vehicle.calculateTravelDistance(data);
             overallDistance += distance;
         }
@@ -547,7 +586,7 @@ public class Solver {
         }
         logger.log("Total travel distance: " + sumTravelDistance);
 
-        System.out.println(sumTravelDistance);
+        //System.out.println(sumTravelDistance);
         logger.log("_ALNSDistance: " + sumTravelDistance);
         logger.log("_iterations: " + numberOfSteps);
         logger.log("_vehicleCountA: " + bestData.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).count());

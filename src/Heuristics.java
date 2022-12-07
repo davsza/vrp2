@@ -18,7 +18,7 @@ public class Heuristics {
         this.CONSTANTS = new Constants();
     }
 
-    public void repairNodes(Data data, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger) {
+    public void repairNodes(Data data, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger, boolean printSwapInfo) {
         LocalTime startTime = LocalTime.now();
         long repairStart = System.nanoTime();
         logger.log("Repairing nodes started at: " + startTime);
@@ -29,29 +29,32 @@ public class Heuristics {
         float regret_2_Weight = heuristicWeights.getRegret_2_InsertWeight() / sumOf;
         float regret_3_Weight = heuristicWeights.getRegret_3_InsertWeight() / sumOf;
         float regret_K_Weight = heuristicWeights.getRegret_K_InsertWeight() / sumOf;
-        double randomValue = random.nextDouble();
+        float randomValue = random.nextFloat();
         if (randomValue < greedyWeight) {
             heuristicWeights.setCurrentInsert(1);
             logger.log("Insert method: greedyInsert");
-            System.out.println("Insert method: greedyInsert");
+            if(printSwapInfo) System.out.println("gi");
             greedyInsert(data, nodesToSwap, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight) {
             heuristicWeights.setCurrentInsert(2);
             logger.log("Insert method: regretInsert_2");
-            System.out.println("Insert method: regretInsert_2");
+            if(printSwapInfo) System.out.println("ri2");
             regretInsert(data, nodesToSwap, 2, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight) {
             heuristicWeights.setCurrentInsert(3);
             logger.log("Insert method: regretInsert_3");
-            System.out.println("Insert method: regretInsert_3");
+            if(printSwapInfo) System.out.println("ri3");
             regretInsert(data, nodesToSwap, 3, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight + regret_K_Weight) {
             heuristicWeights.setCurrentInsert(4);
             logger.log("Insert method: regretInsert_k");
-            System.out.println("Insert method: regretInsert_k");
+            if(printSwapInfo) System.out.println("rik");
             // TODO: for loop
             int customerNodeCount = (int) data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
             regretInsert(data, nodesToSwap, customerNodeCount, logger);
+        } else {
+            System.out.println("Kurva kicsi valószínűségs");
+            System.out.println("Random: " + randomValue + ", sum of: " + (greedyWeight + regret_2_Weight + regret_3_Weight + regret_K_Weight));
         }
 
         LocalTime endTime = LocalTime.now();
@@ -90,9 +93,7 @@ public class Heuristics {
         for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle, false);
             if(!valid) {
-                System.out.println("asdfasdfsadf");
-                String a = ";";
-                a += "3";
+                System.out.println("Invalid vehicle at the start of regret");
             }
         }
 
@@ -169,9 +170,7 @@ public class Heuristics {
         for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle, false);
             if(!valid) {
-                System.out.println("asdfasdfsadf");
-                String a = ";";
-                a += "3";
+                System.out.println("Invalid vehicle after regret values calculated");
             }
         }
 
@@ -244,9 +243,7 @@ public class Heuristics {
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
                 boolean valid = solver.checkForValidity(data, vehicle, false);
                 if(!valid) {
-                    System.out.println("asdfasdfsadf");
-                    String a = ";";
-                    a += "3";
+                    System.out.println("Invalid vehicle after regret insert");
                 }
             }
 
@@ -375,12 +372,10 @@ public class Heuristics {
                 nodeSwap.sortRegretList();
             }
 
-            for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
-                boolean valid = solver.checkForValidity(data, vehicle, false);
-                if(!valid) {
-                    System.out.println("asdfasdfsadf");
-                    String a = ";";
-                    a += "3";
+            for(Vehicle vehicle2 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
+                boolean valid2 = solver.checkForValidity(data, vehicle2, false);
+                if(!valid2) {
+                    System.out.println("Invalid vehicle after regret values recalculated");
                 }
             }
 
@@ -424,7 +419,7 @@ public class Heuristics {
         for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle, false);
             if(!valid) {
-                System.out.println("Init elott, metodus legelejen");
+                System.out.println("Invalid vehicle greedy elott");
             }
         }
 
@@ -491,7 +486,7 @@ public class Heuristics {
         for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle, false);
             if(!valid) {
-                System.out.println("Elso kiszamolas, init");
+                System.out.println("Invalid vehicle greedy ertekeket kiszamolasa utan");
             }
         }
 
@@ -522,7 +517,7 @@ public class Heuristics {
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
                 boolean valid = solver.checkForValidity(data, vehicle, true);
                 if(!valid) {
-                    System.out.println("Beszuras utan");
+                    System.out.println("Invalid vehicle greedy beszuras utan");
                 }
             }
 
@@ -664,7 +659,7 @@ public class Heuristics {
             for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
                 boolean valid = solver.checkForValidity(data, vehicle, false);
                 if(!valid) {
-                    System.out.println("Hibas vehicle a greedy ertekek ujraszamolasa utan");
+                    System.out.println("Invalid vehicle greedy ertekeket kiszamolasa utan");
                 }
             }
 
@@ -677,7 +672,7 @@ public class Heuristics {
 
     }
 
-    public void destroyNodes(Data data, int p, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger) {
+    public void destroyNodes(Data data, int p, List<Node> nodesToSwap, HeuristicWeights heuristicWeights, Logger logger, boolean printSwapInfo) {
         LocalTime startTime = LocalTime.now();
         long destroyStart = System.nanoTime();
         logger.log("Destroying nodes started at: " + startTime);
@@ -695,32 +690,32 @@ public class Heuristics {
         if (randomValue < worstWeight) {
             heuristicWeights.setCurrentRemove(1);
             logger.log("Destroy method: worstRemoval");
-            System.out.println("Destroy method: worstRemoval");
+            if(printSwapInfo) System.out.println("wr");
             worstRemoval(data, p, nodesToSwap, CONSTANTS.getP_WORST(), logger);
         } else if (randomValue < worstWeight + randomWeight) {
             heuristicWeights.setCurrentRemove(2);
             logger.log("Destroy method: randomRemoval");
-            System.out.println("Destroy method: randomRemoval");
+            if(printSwapInfo) System.out.println("rr");
             randomRemoval(data, p, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight) {
             heuristicWeights.setCurrentRemove(3);
             logger.log("Destroy method: relatedRemoval");
-            System.out.println("Destroy method: relatedRemoval");
+            if(printSwapInfo) System.out.println("rel");
             relatedRemoval(data, p, nodesToSwap, CONSTANTS.getPHI(), CONSTANTS.getCHI(), CONSTANTS.getPSI(), CONSTANTS.getP(), logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight) {
             heuristicWeights.setCurrentRemove(4);
             logger.log("Destroy method: deleteDisposal");
-            System.out.println("Destroy method: deleteDisposal");
+            if(printSwapInfo) System.out.println("dd");
             deleteDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight) {
             heuristicWeights.setCurrentRemove(5);
             logger.log("Destroy method: swapDisposal");
-            System.out.println("Destroy method: swapDisposal");
+            if(printSwapInfo) System.out.println("sd");
             swapDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight + insertWeight) {
             heuristicWeights.setCurrentRemove(6);
             logger.log("Destroy method: insertDisposal");
-            System.out.println("Destroy method: insertDisposal");
+            if(printSwapInfo) System.out.println("id");
             insertDisposal(data, nodesToSwap, logger);
         }
 
@@ -970,7 +965,7 @@ public class Heuristics {
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().stream().filter(Node::isDumpingSite).count() > 1).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) {
+        for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty()).collect(Collectors.toList())) {
             int dumpingSites = 0;
             for (Node node : vehicle.getRoute()) {
                 if (node.isDumpingSite()) {
@@ -1007,7 +1002,7 @@ public class Heuristics {
         int dumpingSiteIndex = nodeSwap.getIndex();
 
         // TODO: for loop
-        nodeSwapList.stream().filter(nodeSwap1 -> nodeSwap1.getVehicle().equals(vehicle)).collect(Collectors.toList());
+        nodeSwapList = nodeSwapList.stream().filter(nodeSwap1 -> nodeSwap1.getVehicle().equals(vehicle)).collect(Collectors.toList());
 
         //I might not need the sort at all, since in the loop line 1006 I put the dump from the vehicle in order, so they'll be next to
         //each other, also when I filter them
@@ -1032,9 +1027,17 @@ public class Heuristics {
                 dumpingSiteIndex--;
                 currentNode = vehicle.getRoute().get(dumpingSiteIndex - 1);
             }
+            boolean valid = solver.checkForValidity(data, vehicle, true);
+            if(!valid) {
+                System.out.println("Invalid deletedisposal, last dump");
+            }
         } else {
+            //System.out.println("====");
+            Vehicle copyVehicle = new Vehicle(vehicle);
             int maximumCapacity = vehicle.getMaximumCapacity();
-            int startingIndex = nodeSwapList.indexOf(nodeSwap) == 0 ? 1 : nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) - 1).getIndex();
+            int startingIndex = nodeSwapList.indexOf(nodeSwap) == 0 ? 1 : nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) - 1).getIndex() + 1;
+            //System.out.println("Starting index: " + startingIndex);
+            //System.out.println("End index: " + nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) + 1).getIndex());
             float overallQuantity = 0;
             for (int i = startingIndex; i < nodeSwapList.get(nodeSwapList.indexOf(nodeSwap) + 1).getIndex(); i++) {
                 Node node = vehicle.getRoute().get(i);
@@ -1042,11 +1045,13 @@ public class Heuristics {
                     overallQuantity += node.getQuantity();
                 }
             }
+            //System.out.println("Overall quantity: " + overallQuantity);
             vehicle.getRoute().remove(dumpingSite);
             int numberOfNodesRemoved = 0;
             while (overallQuantity > maximumCapacity) {
                 Node currentNode = vehicle.getRoute().get(dumpingSiteIndex - 1);
                 overallQuantity -= currentNode.getQuantity();
+                //System.out.println("Removing node " + currentNode.getId());
                 nodesToSwap.add(currentNode);
                 vehicle.getRoute().remove(currentNode);
                 numberOfNodesRemoved++;
@@ -1054,12 +1059,16 @@ public class Heuristics {
                     dumpingSiteIndex--;
                 }
             }
+            boolean valid = solver.checkForValidity(data, vehicle, true);
+            if(!valid) {
+                System.out.println("Invalid deletedisposal, middle dump");
+            }
         }
 
         for(Vehicle vehicle2 : data.getFleet().stream().filter(vehicle2 -> !vehicle2.isEmpty() && !vehicle2.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle2, false);
             if(!valid) {
-                System.out.println("deleteDisposal elott");
+                System.out.println("deleteDisposal utan");
             }
         }
 
@@ -1078,7 +1087,7 @@ public class Heuristics {
         for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isEmpty() && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle, false);
             if(!valid) {
-                System.out.println("deleteDisposal elott");
+                System.out.println("swapDisposal elott");
                 int asd = 2;
             }
         }
@@ -1160,7 +1169,7 @@ public class Heuristics {
         for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
             boolean valid = solver.checkForValidity(data, vehicle3, false);
             if(!valid) {
-                System.out.println("deleteDisposal elott");
+                System.out.println("swapDisposal utanS");
                 int asd = 2;
             }
         }

@@ -15,7 +15,7 @@ public class Main {
             LocalTime start = LocalTime.now();
             System.out.println("Iteration " + i + " started at " + start.toString());
             Parser parser = new Parser();
-            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\test");
+            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\converted");
             parser.setFolder();
             long startTime = System.nanoTime();
             // TODO: IF PARSING THE SOLOMON INSTANCES, SET IT TO TRUE, OTHERWISE FALSE
@@ -33,6 +33,7 @@ public class Main {
                 LocalTime greedyEnd = LocalTime.now();
                 LocalTime ALNSStart = LocalTime.now();
                 //System.out.println("Greedy ended at " + greedyEnd + ", ALNS started at " + ALNSStart);
+
                 try {
                     solver.ALNS(data, logger);
                 } catch (IndexOutOfBoundsException exception) {
