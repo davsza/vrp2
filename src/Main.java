@@ -10,16 +10,16 @@ public class Main {
 
     public static void parseData() {
 
-        for(int i = 1; i < 11; i++) {
+        for(int i = 11; i < 16; i++) {
             //System.out.println("======================================================================");
             LocalTime start = LocalTime.now();
             System.out.println("Iteration " + i + " started at " + start.toString());
             Parser parser = new Parser();
-            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\converted");
+            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\test");
             parser.setFolder();
             long startTime = System.nanoTime();
             // TODO: IF PARSING THE SOLOMON INSTANCES, SET IT TO TRUE, OTHERWISE FALSE
-            List<Data> dataList = parser.parseInstances(true);
+            List<Data> dataList = parser.parseInstances(false);
             Solver solver = new Solver(dataList);
             Logger logger;
             for (Data data : dataList) {

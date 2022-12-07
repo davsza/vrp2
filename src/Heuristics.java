@@ -843,7 +843,7 @@ public class Heuristics {
 
         //minden kocsi minden customer nodejara kiszamoljuk, hogy ha kivennenk, mennyi lenne az erteke
         for (Vehicle vehicle : data.getFleet()) {
-            if (vehicle.isEmpty() || vehicle.isPenaltyVehicle()) {
+            if (vehicle.isEmpty()) {
                 continue;
             }
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
@@ -903,40 +903,43 @@ public class Heuristics {
             nodeSwapList.remove(bestNodeSwap);
             nodesToSwap.add(nodeToRemove);
 
-            //removal a kivett node elott
-            Node previousNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1);
-            if (!previousNode.isDepot() && !previousNode.isDumpingSite()) {
-                float distanceBeforeRemoval_ = data.getDistanceBetweenNode(previousNode, nodeToRemove);
-                float distanceAfterRemoval_ = data.getDistanceBetweenNode(previousNode, vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom));
-                currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
-
-                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) previousNode.getId()).findFirst().get();
-                if (currentValue > currentNodeSwap.getValue()) {
-                    currentNodeSwap.setValue(currentValue);
-                    currentNodeSwap.setVehicle(vehicleToRemoveFrom);
-                    currentNodeSwap.setIndex(indexToRemoveFrom - 1);
-                }
-
-            }
-
             for (NodeSwap nodeSwap : nodeSwapList) {
                 if (nodeSwap.getVehicle().equals(vehicleToRemoveFrom) && nodeSwap.getIndex() > indexToRemoveFrom) {
                     nodeSwap.setIndex(nodeSwap.getIndex() - 1);
                 }
             }
 
-            //removal a kivett node utan
-            Node nextNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom);
-            if (!nextNode.isDepot() && !nextNode.isDumpingSite()) {
-                float distanceBeforeRemoval_ = data.getDistanceBetweenNode(nodeToRemove, nextNode);
-                float distanceAfterRemoval_ = data.getDistanceBetweenNode(vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1), nextNode);
-                currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
+            if(!vehicleToRemoveFrom.isPenaltyVehicle()){
 
-                currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) nextNode.getId()).findFirst().get();
-                if (currentValue > currentNodeSwap.getValue()) {
-                    currentNodeSwap.setValue(currentValue);
-                    currentNodeSwap.setVehicle(vehicleToRemoveFrom);
-                    currentNodeSwap.setIndex(indexToRemoveFrom);
+                //removal a kivett node elott
+                Node previousNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1);
+                if (!previousNode.isDepot() && !previousNode.isDumpingSite()) {
+                    float distanceBeforeRemoval_ = data.getDistanceBetweenNode(previousNode, nodeToRemove);
+                    float distanceAfterRemoval_ = data.getDistanceBetweenNode(previousNode, vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom));
+                    currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
+
+                    currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) previousNode.getId()).findFirst().get();
+                    if (currentValue > currentNodeSwap.getValue()) {
+                        currentNodeSwap.setValue(currentValue);
+                        currentNodeSwap.setVehicle(vehicleToRemoveFrom);
+                        currentNodeSwap.setIndex(indexToRemoveFrom - 1);
+                    }
+
+                }
+
+                //removal a kivett node utan
+                Node nextNode = vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom);
+                if (!nextNode.isDepot() && !nextNode.isDumpingSite()) {
+                    float distanceBeforeRemoval_ = data.getDistanceBetweenNode(nodeToRemove, nextNode);
+                    float distanceAfterRemoval_ = data.getDistanceBetweenNode(vehicleToRemoveFrom.getRoute().get(indexToRemoveFrom - 1), nextNode);
+                    currentValue = initialValue - distanceBeforeRemoval_ + distanceAfterRemoval_;
+
+                    currentNodeSwap = nodeSwapList.stream().filter(nodeSwap -> nodeSwap.getNode().getId() == (int) nextNode.getId()).findFirst().get();
+                    if (currentValue > currentNodeSwap.getValue()) {
+                        currentNodeSwap.setValue(currentValue);
+                        currentNodeSwap.setVehicle(vehicleToRemoveFrom);
+                        currentNodeSwap.setIndex(indexToRemoveFrom);
+                    }
                 }
             }
         }
@@ -1103,7 +1106,7 @@ public class Heuristics {
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty()) feasibleVehicles.add(vehicle);
+        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty() && !vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
         for (Vehicle vehicle : feasibleVehicles) {
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);

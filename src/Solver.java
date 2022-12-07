@@ -96,7 +96,7 @@ public class Solver {
                     currentVehicle.getArrivalTimes().add((float) data.getDepotNode().getTimeStart());
                     continue;
                 }
-                dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode);
+                dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode, true);
                 currentTime = currentVehicle.getCurrentTime();
                 travelTime = data.getDistanceBetweenNode(currentNode, dumpingSite);
                 serviceTime = currentNode.getServiceTime();
@@ -109,7 +109,7 @@ public class Solver {
             }
         }
 
-        dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode);
+        dumpingSite = data.getNearestDumpingSiteNode(currentVehicle, currentNode, true);
         currentVehicle.getArrivalTimes().add(currentVehicle.getArrivalTimes().get(currentVehicle.getArrivalTimes().size() - 1) + currentNode.getServiceTime() + data.getDistanceBetweenNode(currentNode, dumpingSite));
         currentVehicle.getArrivalTimes().add(currentVehicle.getArrivalTimes().get(currentVehicle.getArrivalTimes().size() - 1) + dumpingSite.getServiceTime() + data.getDistanceBetweenNode(dumpingSite, data.getDepotNode()));
         currentVehicle.getRoute().add(dumpingSite);
@@ -117,7 +117,7 @@ public class Solver {
 
         for (Vehicle vehicle : data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() == 0 && !vehicle.isPenaltyVehicle()).collect(Collectors.toList())) {
             Node depotNode = data.getDepotNode();
-            Node dump = data.getNearestDumpingSiteNode(vehicle, depotNode);
+            Node dump = data.getNearestDumpingSiteNode(vehicle, depotNode, false);
             vehicle.getRoute().add(depotNode);
             vehicle.getRoute().add(dump);
             vehicle.getRoute().add(depotNode);

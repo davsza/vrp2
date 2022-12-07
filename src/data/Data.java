@@ -120,7 +120,7 @@ public class Data {
         float distance = Float.MAX_VALUE;
         Node nextNode = new Node();
         nextNode.setNullNode(true);
-        Node nearestDump = getNearestDumpingSiteNode(currentVehicle, currentNode);
+        Node nearestDump = getNearestDumpingSiteNode(currentVehicle, currentNode, true);
         float dumpDistance = getDistanceBetweenNode(currentNode, nearestDump);
         List<Node> feasibleNodes = nodeList.stream().filter(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited()).collect(Collectors.toList());
         for(Node node : feasibleNodes) {
@@ -152,7 +152,7 @@ public class Data {
 
     // TODO: fix needed, depot endtime reached
     private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode) {
-        Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode);
+        Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode, true);
         float travelDistanceFromCurrentNodeToDumpingSite = getDistanceBetweenNode(currentNode, dumpingSite);
         float dumpingSiteServiceTime = dumpingSite.getServiceTime();
         float travelDistanceFromDumpingSiteToDepot = getDistanceBetweenNode(dumpingSite, getDepotNode());
@@ -170,14 +170,15 @@ public class Data {
         return vehicle.getCapacity() + node.getQuantity() <= vehicle.getMaximumCapacity();
     }
 
-    public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode) {
+    public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode, boolean strictDumpingSiteTW) {
         float bestDistance = Float.MAX_VALUE;
         Node nearestDumpingSite = null;
         for(Node node : nodeList) {
             if(node.isDumpingSite()) {
                 float travelDistance = getDistanceBetweenNode(currentNode, node);
                 if(travelDistance < bestDistance
-                        && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)) {
+                        && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)
+                        && (strictDumpingSiteTW ? currentVehicle.getCurrentTime() + travelDistance >= node.getTimeStart() : true)) {
                     bestDistance = travelDistance;
                     nearestDumpingSite = node;
                 }
