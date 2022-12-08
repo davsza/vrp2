@@ -33,21 +33,25 @@ public class Heuristics {
         if (randomValue < greedyWeight) {
             heuristicWeights.setCurrentInsert(1);
             logger.log("Insert method: greedyInsert");
+            System.out.println("Insert method: greedyInsert");
             if(printSwapInfo) System.out.println("gi");
             greedyInsert(data, nodesToSwap, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight) {
             heuristicWeights.setCurrentInsert(2);
             logger.log("Insert method: regretInsert_2");
+            System.out.println("Insert method: regretInsert_2");
             if(printSwapInfo) System.out.println("ri2");
             regretInsert(data, nodesToSwap, 2, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight) {
             heuristicWeights.setCurrentInsert(3);
             logger.log("Insert method: regretInsert_3");
+            System.out.println("Insert method: regretInsert_3");
             if(printSwapInfo) System.out.println("ri3");
             regretInsert(data, nodesToSwap, 3, logger);
         } else if (randomValue < greedyWeight + regret_2_Weight + regret_3_Weight + regret_K_Weight) {
             heuristicWeights.setCurrentInsert(4);
             logger.log("Insert method: regretInsert_k");
+            System.out.println("Insert method: regretInsert_k");
             if(printSwapInfo) System.out.println("rik");
             // TODO: for loop
             int customerNodeCount = (int) data.getNodeList().stream().filter(node -> !node.isDepot() && !node.isDumpingSite()).count();
@@ -690,31 +694,37 @@ public class Heuristics {
         if (randomValue < worstWeight) {
             heuristicWeights.setCurrentRemove(1);
             logger.log("Destroy method: worstRemoval");
+            System.out.println("Destroy method: worstRemoval");
             if(printSwapInfo) System.out.println("wr");
             worstRemoval(data, p, nodesToSwap, CONSTANTS.getP_WORST(), logger);
         } else if (randomValue < worstWeight + randomWeight) {
             heuristicWeights.setCurrentRemove(2);
             logger.log("Destroy method: randomRemoval");
+            System.out.println("Destroy method: randomRemoval");
             if(printSwapInfo) System.out.println("rr");
             randomRemoval(data, p, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight) {
             heuristicWeights.setCurrentRemove(3);
             logger.log("Destroy method: relatedRemoval");
+            System.out.println("Destroy method: relatedRemoval");
             if(printSwapInfo) System.out.println("rel");
             relatedRemoval(data, p, nodesToSwap, CONSTANTS.getPHI(), CONSTANTS.getCHI(), CONSTANTS.getPSI(), CONSTANTS.getP(), logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight) {
             heuristicWeights.setCurrentRemove(4);
             logger.log("Destroy method: deleteDisposal");
+            System.out.println("Destroy method: deleteDisposal");
             if(printSwapInfo) System.out.println("dd");
             deleteDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight) {
             heuristicWeights.setCurrentRemove(5);
             logger.log("Destroy method: swapDisposal");
+            System.out.println("Destroy method: swapDisposal");
             if(printSwapInfo) System.out.println("sd");
             swapDisposal(data, nodesToSwap, logger);
         } else if (randomValue < worstWeight + randomWeight + relatedWeight + deleteWeight + swapWeight + insertWeight) {
             heuristicWeights.setCurrentRemove(6);
             logger.log("Destroy method: insertDisposal");
+            System.out.println("Destroy method: insertDisposal");
             if(printSwapInfo) System.out.println("id");
             insertDisposal(data, nodesToSwap, logger);
         }
@@ -782,6 +792,14 @@ public class Heuristics {
             bestNodeSwap.getVehicle().getRoute().remove(bestNodeSwap.getNode());
         }
 
+        for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
+            boolean valid = solver.checkForValidity(data, vehicle3, false);
+            if(!valid) {
+                System.out.println("relatedremoval utanS");
+                int asd = 2;
+            }
+        }        
+
         LocalTime endTime = LocalTime.now();
         long endNanoTime = System.nanoTime();
         logger.log("relatedRemoval ended at: " + endTime + ", took " + ((endNanoTime - startNanoTime) * 1e-9) + " seconds");
@@ -819,6 +837,14 @@ public class Heuristics {
                     }
                 }
                 if (found) break;
+            }
+        }
+
+        for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
+            boolean valid = solver.checkForValidity(data, vehicle3, false);
+            if(!valid) {
+                System.out.println("randomremovel utanS");
+                int asd = 2;
             }
         }
 
@@ -941,6 +967,14 @@ public class Heuristics {
                         currentNodeSwap.setIndex(indexToRemoveFrom);
                     }
                 }
+            }
+        }
+
+        for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
+            boolean valid = solver.checkForValidity(data, vehicle3, false);
+            if(!valid) {
+                System.out.println("worstremoval utan");
+                int asd = 2;
             }
         }
 
@@ -1106,7 +1140,7 @@ public class Heuristics {
         // TODO: for loop
         //List<Vehicle> feasibleVehicles = data.getFleet().stream().filter(vehicle -> vehicle.getRoute().size() > 3).collect(Collectors.toList());
         List<Vehicle> feasibleVehicles = new ArrayList<>();
-        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty() && !vehicle.isPenaltyVehicle()) feasibleVehicles.add(vehicle);
+        for (Vehicle vehicle : data.getFleet()) if (!vehicle.isEmpty()) feasibleVehicles.add(vehicle);
         for (Vehicle vehicle : feasibleVehicles) {
             for (int i = 0; i < vehicle.getRoute().size(); i++) {
                 Node node = vehicle.getRoute().get(i);
@@ -1153,6 +1187,19 @@ public class Heuristics {
             vehicle.getRoute().remove(previousNode);
             dumpingSiteIndex--;
         }
+
+
+        while(!solver.checkForValidity(data, vehicle, false) && dumpingSiteIndex < vehicle.getRoute().size()-2) {
+            nextNode = vehicle.getRoute().get(dumpingSiteIndex+1);
+            if(!nextNode.isDumpingSite() || !nextNode.isDepot()){
+                nodesToSwap.add(nextNode);
+                vehicle.getArrivalTimes().remove(dumpingSiteIndex+1);
+                vehicle.getRoute().remove(dumpingSiteIndex+1);
+            } 
+        }
+        solver.updateArrivalTimesForVehicle(vehicle, data);
+
+        /* 
         for (int i = dumpingSiteIndex + 1; i < vehicle.getRoute().size() - 1; i++) {
             nextNode = vehicle.getRoute().get(i);
             serviceTime = disposalSiteToSwapWith.getServiceTime();
@@ -1168,12 +1215,66 @@ public class Heuristics {
             vehicle.getRoute().remove(nextNode);
             i--;
         }
+        */
+
+        List<Node> dumps = new ArrayList<>();
+        int idx_lastDump = vehicle.getRoute().size()-2;
+        while(vehicle.getRoute().get(idx_lastDump).isDumpingSite())
+        {
+            dumps.add(vehicle.getRoute().get(idx_lastDump));
+            idx_lastDump--;
+        }
+        if(dumps.size() > 1) {
+            System.out.println("hujj");
+        }
+        
+        if(dumps.size() == 0) {
+            System.out.println("what");
+        }
+
+        int numDumps = dumps.size();
+        int idx_lastDepo = vehicle.getRoute().size()-1;
+        Node lastdepot = vehicle.getRoute().get(idx_lastDepo);
+        idx_lastDump = vehicle.getRoute().size()-2;
+        int idx_firstDump = vehicle.getRoute().size()-numDumps-1;
+        float leavingLastDump = vehicle.getArrivalTimes().get(idx_lastDump) + dumps.get(0).getServiceTime();
+        float dumpDepotTravel = data.getDistanceBetweenNode(dumps.get(0), lastdepot);
+        while(leavingLastDump + dumpDepotTravel > lastdepot.getTimeEnd()) {
+            int idx_lastCustomer = vehicle.getRoute().size()-numDumps-2;
+            Node lastCustomer =  vehicle.getRoute().get(idx_lastCustomer);
+            nodesToSwap.add(lastCustomer);
+            vehicle.getArrivalTimes().remove(idx_lastCustomer);
+            vehicle.getRoute().remove(idx_lastCustomer);
+            idx_lastDepo--;
+            idx_firstDump--;
+            idx_lastDump--;
+            idx_lastCustomer--;
+            lastCustomer = vehicle.getRoute().get(idx_lastCustomer);
+            int idx_currDump = idx_firstDump;
+            Node currDump = vehicle.getRoute().get(idx_currDump);
+            float travelToCurrent = data.getDistanceBetweenNode(lastCustomer, currDump);
+            float lastNodeDeparture = vehicle.getArrivalTimes().get(idx_lastCustomer) + lastCustomer.getServiceTime();
+            vehicle.getArrivalTimes().set(idx_currDump, Math.max(currDump.getTimeStart(), lastNodeDeparture + travelToCurrent));
+            Node prevDump = null;
+            idx_currDump++;
+            while(idx_currDump < idx_lastDepo) {
+                prevDump = currDump;
+                currDump =  vehicle.getRoute().get(idx_currDump);
+                travelToCurrent = data.getDistanceBetweenNode(prevDump, currDump);
+                lastNodeDeparture = vehicle.getArrivalTimes().get(idx_currDump-1) + prevDump.getServiceTime();
+                vehicle.getArrivalTimes().set(idx_currDump, Math.max(currDump.getTimeStart(), lastNodeDeparture + travelToCurrent));
+                idx_currDump++;
+            }
+
+            leavingLastDump = vehicle.getArrivalTimes().get(idx_lastDump) + dumps.get(0).getServiceTime();
+            dumpDepotTravel = data.getDistanceBetweenNode(dumps.get(0), lastdepot);
+        }
 
         for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
-            boolean valid = solver.checkForValidity(data, vehicle3, false);
+            boolean valid = solver.checkForValidity(data, vehicle3, true);
             if(!valid) {
                 System.out.println("swapDisposal utanS");
-                int asd = 2;
+                //throw new Exception();
             }
         }
 
@@ -1183,7 +1284,7 @@ public class Heuristics {
 
     }
 
-    private void insertDisposal(Data data, List<Node> nodesToSwap, Logger logger) {
+    private void insertDisposal(Data data, List<Node> nodesToSwap, Logger logger){
 
         LocalTime startTime = LocalTime.now();
         logger.log("inertDisposal started at: " + startTime);
@@ -1207,7 +1308,9 @@ public class Heuristics {
 
         int index = vehicleToInsertInto.getRoute().size(); // lista merete, ezert indexbound lenne ha erre hivatkozunk de mivel beszurjuk index - 1-re a nodeot ezert beszuras utan jo lesz
         vehicleToInsertInto.getRoute().add(vehicleToInsertInto.getRoute().size() - 1, disposalSiteToInsert);
-
+        vehicleToInsertInto.getArrivalTimes().add(index, (float) 0);
+        solver.updateArrivalTimesForVehicle(vehicleToInsertInto,data);
+/* 
         Node currentNode;
         vehicleToInsertInto.getArrivalTimes().add(index, (float) 0);
         float arriveTimeAtPreviousNode,
@@ -1226,6 +1329,71 @@ public class Heuristics {
             nodesToSwap.add(currentNode);
             vehicleToInsertInto.getRoute().remove(currentNode);
             index--;
+        }*/
+
+
+        List<Node> dumps = new ArrayList<>();
+        int idx_lastDump = vehicleToInsertInto.getRoute().size()-2;
+        while(vehicleToInsertInto.getRoute().get(idx_lastDump).isDumpingSite())
+        {
+            dumps.add(vehicleToInsertInto.getRoute().get(idx_lastDump));
+            idx_lastDump--;
+        }        
+        if(dumps.size() > 2) {
+            System.out.println("hijj");
+        }        
+
+        if(dumps.size() == 0) {
+            System.out.println("what");
+        }
+
+        int numDumps = dumps.size();
+        int idx_lastDepo = vehicleToInsertInto.getRoute().size()-1;
+        Node lastdepot = vehicleToInsertInto.getRoute().get(idx_lastDepo);
+        idx_lastDump = vehicleToInsertInto.getRoute().size()-2;
+        if(idx_lastDump == 0 || dumps.size() == 0){
+            System.out.println('w');
+        }
+        int idx_firstDump = vehicleToInsertInto.getRoute().size()-numDumps-1;
+        float leavingLastDump = vehicleToInsertInto.getArrivalTimes().get(idx_lastDump) + dumps.get(0).getServiceTime();
+        float dumpDepotTravel = data.getDistanceBetweenNode(dumps.get(0), lastdepot);
+        while(leavingLastDump + dumpDepotTravel > lastdepot.getTimeEnd()) {
+            int idx_lastCustomer = vehicleToInsertInto.getRoute().size()-numDumps-2;
+            Node lastCustomer =  vehicleToInsertInto.getRoute().get(idx_lastCustomer);
+            nodesToSwap.add(lastCustomer);
+            vehicleToInsertInto.getArrivalTimes().remove(idx_lastCustomer);
+            vehicleToInsertInto.getRoute().remove(idx_lastCustomer);
+            idx_lastDepo--;
+            idx_lastDump--;
+            idx_firstDump--;
+            idx_lastCustomer--;
+            lastCustomer = vehicleToInsertInto.getRoute().get(idx_lastCustomer);
+            int idx_currDump = idx_firstDump;
+            Node currDump = vehicleToInsertInto.getRoute().get(idx_currDump);
+            float travelToCurrent = data.getDistanceBetweenNode(lastCustomer, currDump);
+            float lastNodeDeparture = vehicleToInsertInto.getArrivalTimes().get(idx_lastCustomer) + lastCustomer.getServiceTime();
+            vehicleToInsertInto.getArrivalTimes().set(idx_currDump, Math.max(currDump.getTimeStart(), lastNodeDeparture + travelToCurrent));
+            Node prevDump = null;
+            idx_currDump++;
+            while(idx_currDump < idx_lastDepo) {
+                prevDump = currDump;
+                currDump =  vehicleToInsertInto.getRoute().get(idx_currDump);
+                travelToCurrent = data.getDistanceBetweenNode(prevDump, currDump);
+                lastNodeDeparture = vehicleToInsertInto.getArrivalTimes().get(idx_currDump-1) + prevDump.getServiceTime();
+                vehicleToInsertInto.getArrivalTimes().set(idx_currDump, Math.max(currDump.getTimeStart(), lastNodeDeparture + travelToCurrent));
+                idx_currDump++;
+            }
+
+            leavingLastDump = vehicleToInsertInto.getArrivalTimes().get(idx_lastDump) + dumps.get(0).getServiceTime();
+            dumpDepotTravel = data.getDistanceBetweenNode(dumps.get(0), lastdepot);
+        }
+
+        for(Vehicle vehicle3 : data.getFleet().stream().filter(vehicle3 -> !vehicle3.isEmpty() && !vehicle3.isPenaltyVehicle()).collect(Collectors.toList())) {
+            boolean valid = solver.checkForValidity(data, vehicle3, true);
+            if(!valid) {
+                System.out.println("insertdisposal utanS");
+                //throw new Exception();
+            }
         }
 
         LocalTime endTime = LocalTime.now();

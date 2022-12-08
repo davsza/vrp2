@@ -10,12 +10,12 @@ public class Main {
 
     public static void parseData() {
 
-        for(int i = 11; i < 16; i++) {
+        for(int i = 1; i < 11; i++) {
             //System.out.println("======================================================================");
             LocalTime start = LocalTime.now();
             System.out.println("Iteration " + i + " started at " + start.toString());
             Parser parser = new Parser();
-            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\test");
+            parser.addPath("C:\\Users\\david\\PycharmProjects\\szakdoga\\benchmark");
             parser.setFolder();
             long startTime = System.nanoTime();
             // TODO: IF PARSING THE SOLOMON INSTANCES, SET IT TO TRUE, OTHERWISE FALSE
@@ -36,7 +36,7 @@ public class Main {
 
                 try {
                     solver.ALNS(data, logger);
-                } catch (IndexOutOfBoundsException exception) {
+                 } catch (Exception exception) {
                     logger.log(exception.getLocalizedMessage());
                     logger.writeFile();
                     System.out.println(data.getInfo() + " failed");

@@ -121,7 +121,9 @@ public class Data {
         Node nextNode = new Node();
         nextNode.setNullNode(true);
         Node nearestDump = getNearestDumpingSiteNode(currentVehicle, currentNode, true);
-        float dumpDistance = getDistanceBetweenNode(currentNode, nearestDump);
+        if(nearestDump == null)
+            System.out.println("ajjaj");        
+        float dumpDistance = getDistanceBetweenNode(currentNode, nearestDump);        
         List<Node> feasibleNodes = nodeList.stream().filter(node -> !node.isDepot() && !node.isDumpingSite() && !node.isVisited()).collect(Collectors.toList());
         for(Node node : feasibleNodes) {
             float travelDistance = getDistanceBetweenNode(currentNode, node);
@@ -137,7 +139,8 @@ public class Data {
                     && maximumNodesVisited(currentVehicle)
                     && timeWindowCheck(currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance, node)
                     && currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance >= node.getTimeStart()
-                    && checkForDepotTW(currentVehicle, currentNode)) {
+                    && currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance <= node.getTimeEnd()
+                    && checkForDepotTW(currentVehicle, currentNode, node)) {
                 distance = travelDistance;
                 nextNode = node;
             }
@@ -151,13 +154,21 @@ public class Data {
     }
 
     // TODO: fix needed, depot endtime reached
-    private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode) {
-        Node dumpingSite = getNearestDumpingSiteNode(currentVehicle, currentNode, true);
-        float travelDistanceFromCurrentNodeToDumpingSite = getDistanceBetweenNode(currentNode, dumpingSite);
+    private boolean checkForDepotTW(Vehicle currentVehicle, Node currentNode, Node nextNode) {
+        Node dumpingSite = getNearestTransitionalDumpingSiteNode(currentVehicle, currentNode, nextNode);
+        if(dumpingSite == null)
+            return false;
+        float currentServiceTime = currentNode.getServiceTime();
+        float nextServiceTime = nextNode.getServiceTime();
+        float travelDistanceBetweenCustomers = getDistanceBetweenNode(currentNode, nextNode);
+        float travelDistanceFromNextNodeToDumpingSite = getDistanceBetweenNode(nextNode, dumpingSite);
         float dumpingSiteServiceTime = dumpingSite.getServiceTime();
         float travelDistanceFromDumpingSiteToDepot = getDistanceBetweenNode(dumpingSite, getDepotNode());
         return timeWindowCheck(currentVehicle.getCurrentTime()
-                + travelDistanceFromCurrentNodeToDumpingSite
+                + currentServiceTime        
+                + travelDistanceBetweenCustomers
+                + nextServiceTime                
+                + travelDistanceFromNextNodeToDumpingSite
                 + dumpingSiteServiceTime
                 + travelDistanceFromDumpingSiteToDepot, getDepotNode());
     }
@@ -170,15 +181,15 @@ public class Data {
         return vehicle.getCapacity() + node.getQuantity() <= vehicle.getMaximumCapacity();
     }
 
-    public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode, boolean strictDumpingSiteTW) {
+    public Node getNearestDumpingSiteNode(Vehicle currentVehicle, Node currentNode, boolean canWait) {
         float bestDistance = Float.MAX_VALUE;
         Node nearestDumpingSite = null;
         for(Node node : nodeList) {
             if(node.isDumpingSite()) {
                 float travelDistance = getDistanceBetweenNode(currentNode, node);
                 if(travelDistance < bestDistance
-                        && timeWindowCheck(currentVehicle.getCurrentTime() + travelDistance, node)
-                        && (strictDumpingSiteTW ? currentVehicle.getCurrentTime() + travelDistance >= node.getTimeStart() : true)) {
+                        && (currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance >= node.getTimeStart() || canWait)
+                        && timeWindowCheck(currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance, node)) {
                     bestDistance = travelDistance;
                     nearestDumpingSite = node;
                 }
@@ -187,6 +198,44 @@ public class Data {
         return nearestDumpingSite;
     }
 
+    public Node getNearestDumpingSiteNodeWithtWaiting(Vehicle currentVehicle, Node currentNode) {
+        float bestDistance = Float.MAX_VALUE;
+        Node nearestDumpingSite = null;
+        for(Node node : nodeList) {
+            if(node.isDumpingSite()) {
+                float travelDistance = getDistanceBetweenNode(currentNode, node);
+                if(travelDistance < bestDistance
+                        && timeWindowCheck(currentVehicle.getCurrentTime() + currentNode.getServiceTime() + travelDistance, node)) {
+                    bestDistance = travelDistance;
+                    nearestDumpingSite = node;
+                }
+            }
+        }
+        return nearestDumpingSite;
+    }
+
+    public Node getNearestTransitionalDumpingSiteNode(Vehicle currentVehicle, Node currentNode, Node nextNode) {
+        float bestDistance = Float.MAX_VALUE;
+        Node nearestDumpingSite = null;
+        for(Node node : nodeList) {
+            if(node.isDumpingSite()) {
+                float currentService = currentNode.getServiceTime();
+                float travelDistanceBetweenNodes = getDistanceBetweenNode(currentNode, nextNode);
+                float nextService = nextNode.getServiceTime();
+                float travelToDump = getDistanceBetweenNode(nextNode, node);
+                float sumTravel = travelDistanceBetweenNodes + travelToDump;
+                float arrivalAtNextNode = Math.max(nextNode.getTimeStart(), 
+                                            currentVehicle.getCurrentTime() + currentService + travelDistanceBetweenNodes);
+                if(sumTravel < bestDistance
+                        && timeWindowCheck(arrivalAtNextNode + nextService + travelToDump, node)) {
+                    bestDistance = sumTravel;
+                    nearestDumpingSite = node;
+                }
+            }
+        }
+        return nearestDumpingSite;
+    }
+    
     public boolean timeWindowCheck(float arrivalTime, Node node) {
         //return arrivalTime >= node.getTimeStart() && arrivalTime <= node.getTimeEnd();
         return arrivalTime <= node.getTimeEnd();
