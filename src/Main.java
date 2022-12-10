@@ -10,7 +10,7 @@ public class Main {
 
     public static void parseData() {
 
-        for(int i = 1; i < 11; i++) {
+        for(int i = 5; i < 11; i++) {
             //System.out.println("======================================================================");
             LocalTime start = LocalTime.now();
             System.out.println("Iteration " + i + " started at " + start.toString());

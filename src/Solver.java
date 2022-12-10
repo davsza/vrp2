@@ -246,11 +246,11 @@ public class Solver {
         while (numberOfSteps < 25000 && noBetterSolutionFound < 2000) {
 
             logger.log("Iteration " + numberOfSteps);
-            System.out.println("Iteration " + numberOfSteps);
+            //System.out.println("Iteration " + numberOfSteps);
             iterationStart = System.nanoTime();
 
             //System.out.println("Iteration " + numberOfSteps);
-            //System.out.println(numberOfSteps + " of " + data.getInfo() + ", not better solution found in " + noBetterSolutionFound);
+            System.out.println(numberOfSteps + " of " + data.getInfo() + ", not better solution found in " + noBetterSolutionFound);
 
             currentData = new Data(data);
             currentValue = getDataValue(currentData);
@@ -264,35 +264,9 @@ public class Solver {
             updateArrivalTimes(currentData);
 
             heuristics.repairNodes(currentData, nodesToSwap, heuristicWeights, logger, printSwapInfo);
-            int num = 0;
-            for(Vehicle vehicle : data.getFleet()) {
-                for(Node node : vehicle.getRoute()) {
-                    if(node.customerNode()) {
-                        num++;
-                    }
-                }
-            }
-            if(num != data.getMatrix().length - 3) {
-                System.out.println("Customer number count ERROR");
-            }
+
             newValue = getDataValue(currentData);
 
-            for(Vehicle vehicle : data.getFleet()) {
-                if(vehicle.isPenaltyVehicle()) {
-                    if(vehicle.getRoute().size() > 0) {
-                        //System.out.println("Penaltyvehicle has customers on it");
-                    }
-                }
-            }
-
-            for(Vehicle vehicle : data.getFleet().stream().filter(vehicle -> !vehicle.isPenaltyVehicle() && !vehicle.isEmpty()).collect(Collectors.toList())) {
-                boolean valid = checkForValidity(data, vehicle, false);
-                if (!valid) {
-                    System.out.println("Vehicle " + vehicle.getId() + " is invalid!");
-                }
-            }
-
-                //System.out.println(newValue);
             logger.log("New data value: " + newValue);
 
             delta = newValue - currentValue;
@@ -356,14 +330,6 @@ public class Solver {
             logger.log("Iteration took " + ((iterationEnd - iterationStart) * 1e-9) + " seconds");
             logger.emptyLine();
             logger.emptyLine();
-        }
-
-        for(Vehicle vehicle : data.getFleet()) {
-            if(vehicle.isPenaltyVehicle()) {
-                if(vehicle.getRoute().size() > 0) {
-                    System.out.println("Penalty vehicle has customers on it");
-                }
-            }
         }
 
         // TODO: do something with the best found solution (bestData)
